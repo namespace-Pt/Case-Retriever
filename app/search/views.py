@@ -10,7 +10,7 @@ from elasticsearch import Elasticsearch
 elastic = Elasticsearch(
     "http://localhost:9200"
 )
-default_index = "test-chinese"
+default_index = "lecard"
 
 
 def elastic_search(**kargs):
@@ -34,7 +34,7 @@ def elastic_search(**kargs):
         if "title" not in new_hit:
             new_hit["title"] = hit["_source"]["title"]
         if "abstract" not in new_hit:
-            new_hit["abstract"] = hit["_source"]["abstract"]
+            new_hit["abstract"] = hit["_source"]["abstract"][:500]
 
         # set highlight with blue color
         processed_hits.append(new_hit)
@@ -50,19 +50,6 @@ def main(request):
     elif request.method == "POST":
         query = request.POST["query"]
         backbone = request.POST["backbone"]
-
-        # hits = [
-        #     {
-        #         "title": "fuck",
-        #         "abstract": "this is a story about fucking",
-        #         "body": "fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck is fuck"
-        #     },
-        #     {
-        #         "title": "shit",
-        #         "abstract": "this is a story about shiting",
-        #         "body": "shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit is shit"
-        #     },
-        # ]
 
         hits = elastic_search(
             index=default_index,
@@ -88,7 +75,6 @@ def main(request):
                 }
             }
         )
-        # return render(request, "search/index.html", {"hits": hits})
         return JsonResponse(data={"hits": hits})
 
 
