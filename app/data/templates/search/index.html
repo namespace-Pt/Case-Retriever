@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static %}
+{% block body %}
+
+<div class="container search-bar">
+    <div class="input-group pt-5">
+        <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">BM25</button>
+            <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
+                <li><h6 class="dropdown-header">Select Backbone</h6></li>
+                <li><a class="dropdown-item" href="#">BM25</a></li>
+                <li><a class="dropdown-item" href="#">DPR</a></li>
+                <li><a class="dropdown-item" href="#">UniCOIL</a></li>
+            </div>
+
+        <!-- flex-grow-1 makes the first element under this div take up as much space as it can, remaining necessary space for other elements -->
+        <div class="form-floating flex-grow-1">
+            <!-- the placeholder is necessary here for the floating label to work -->
+            <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder"></textarea>
+            <label for="search-query">Input Query...</label>
+        </div>
+        <button class="btn btn-primary border-primary bg-white rounded-0" type="submit" id="search-button">
+            <img src="{% static 'icon/search.svg' %}" alt="search">
+        </button>
+    </div>
+</div>
+
+<!-- donot use django template here because ajax is designed to async returning data, while template is used to refresh the entire page -->
+<div class="container search-results pt-5">
+</div>
+
+<script>
+    // set the text of backbone-dropdown-button by the clicked backbone
+    $(".dropdown-item").click(function(){
+        $("#backbone-dropdown-button").text($(this).text())
+    })
+
+    // send search post when clicking the button
+    $("#search-button").click(function(){
+        $.post(
+            "{% url 'search-main' %}",
+            {
+                query: $("#search-query").val(),
+                backbone: $("#backbone-dropdown-button").text(),
+            },
+            function(response){
+                console.log(response)
+                // reset the height of the textarea
+                $("#search-query").height("")
+
+                // get all hits
+                hits = response["hits"]
+
+                // remove all previous searched documents
+                $(".search-results").html("")
+
+                // display hits in the search-results container
+                for (hit of hits){
+                    // here we must use the url string instead of the url name because it contains parameters
+                    var title = $("<a class='text-decoration-none' href='detail/" + hit._id + "/' target='_blank'>" + hit.title + "</a>")
+                    var abstract = $("<p>" + hit.abstract + "</p>")
+                    var frame = $("<div class='search-result'>")
+                    frame.append(title, abstract).appendTo($(".search-results"))
+                }
+            }
+        )
+    })
+
+    // press enter key to search
+    // disable creating new line when pressing enter key
+    // to create new line, use shift+enter
+    $("textarea").keydown(function(event){
+        if (event.keyCode == 13 && !event.shiftKey)
+        {
+            // prevent default behavior
+            event.preventDefault();
+            $("#search-button").click();
+        }
+    });
+
+</script>
+{% endblock %}
