@@ -1,10 +1,13 @@
 import json
+import numpy as np
 from tqdm import tqdm
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
 from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 from elasticsearch import Elasticsearch
+from transformers import AutoModel, AutoTokenizer
+from .utils import dpr_encode
 
 
 elastic = Elasticsearch(
@@ -12,8 +15,13 @@ elastic = Elasticsearch(
 )
 default_index = "lecard"
 
+plm_dir = "data/model/DPR"
+dpr_model = AutoModel.from_pretrained(plm_dir)
+tokenizer = AutoTokenizer.from_pretrained(plm_dir)
 
-def elastic_search(**kargs):
+
+
+def bm25_search(**kargs):
     """
     returning the processed hits, each element of which is a single document
     """
@@ -42,6 +50,17 @@ def elastic_search(**kargs):
     return processed_hits
 
 
+def knn_search(**kargs):
+    hits = elastic.knn_search(**kargs)["hits"]["hits"]
+    processed_hits = []
+    for hit in hits:
+        new_hit = {"_id": hit["_id"]}
+        new_hit["title"] = hit["_source"]["title"][:100]
+        new_hit["abstract"] = hit["_source"]["abstract"][:500]
+        processed_hits.append(new_hit)
+    return processed_hits
+
+
 def main(request):
     if request.method == "GET":
         context = {}
@@ -49,32 +68,47 @@ def main(request):
 
     elif request.method == "POST":
         query = request.POST["query"]
-        backbone = request.POST["backbone"]
+        backbone = request.POST["backbone"].lower()
 
-        hits = elastic_search(
-            index=default_index,
-            query={
-                "combined_fields": {
-                    "query": query,
-                    "fields": ["title", "abstract"]
-                }
-            },
-            # set color
-            highlight={
-                "fields": {
-                    "title": {
-                        "pre_tags" : ["<strong>"],
-                        "post_tags": ["</strong>"],
-                        "number_of_fragments": 2,
-                    },
-                    "abstract": {
-                        "pre_tags" : ["<strong>"],
-                        "post_tags": ["</strong>"],
-                        "number_of_fragments": 2,
+        if backbone == "bm25":
+            hits = bm25_search(
+                index=default_index,
+                query={
+                    "combined_fields": {
+                        "query": query,
+                        "fields": ["title", "abstract"]
+                    }
+                },
+                # set color
+                highlight={
+                    "fields": {
+                        "title": {
+                            "pre_tags" : ["<strong>"],
+                            "post_tags": ["</strong>"],
+                            "number_of_fragments": 2,
+                        },
+                        "abstract": {
+                            "pre_tags" : ["<strong>"],
+                            "post_tags": ["</strong>"],
+                            "number_of_fragments": 2,
+                        }
                     }
                 }
-            }
-        )
+            )
+
+        elif backbone == "dpr":
+            hits = knn_search(
+                index="lecard",
+                knn={
+                    "field": "vector",
+                    "query_vector": dpr_encode(query, dpr_model, tokenizer),
+                    "k": 10,
+                    # this is necessary
+                    "num_candidates": 100
+                },
+                source=["title", "abstract"]
+            )
+
         return JsonResponse(data={"hits": hits})
 
 
