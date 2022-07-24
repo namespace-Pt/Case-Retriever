@@ -2,14 +2,13 @@
 {% load static %}
 {% block body %}
 
-<div class="container search-bar">
-    <div class="input-group pt-5">
+<div class="container">
+    <div class="input-group pt-3 pb-3 search-bar">
         <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">BM25</button>
             <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
                 <li><h6 class="dropdown-header">Select Backbone</h6></li>
                 <li><a class="dropdown-item" href="#">BM25</a></li>
                 <li><a class="dropdown-item" href="#">DPR</a></li>
-                <li><a class="dropdown-item" href="#">UniCOIL</a></li>
             </div>
 
         <!-- flex-grow-1 makes the first element under this div take up as much space as it can, remaining necessary space for other elements -->
@@ -18,14 +17,18 @@
             <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder"></textarea>
             <label for="search-query">Input Query...</label>
         </div>
-        <button class="btn btn-primary border-primary bg-white rounded-0" type="submit" id="search-button">
-            <img src="{% static 'icon/search.svg' %}" alt="search">
+        <button class="btn btn-primary rounded-0" type="submit" id="search-button">
+            search
         </button>
     </div>
 </div>
 
-<!-- donot use django template here because ajax is designed to async returning data, while template is used to refresh the entire page -->
-<div class="container search-results pt-5">
+<div class="row m-3">
+    <div class="col-2" id="search-facets">
+    </div>
+    <div class="col" id="search-results">
+        <!-- donot use django template here because ajax is designed to async returning data, while template is used to refresh the entire page -->
+    </div>
 </div>
 
 <script>
@@ -36,34 +39,20 @@
 
     // send search post when clicking the button
     $("#search-button").click(function(){
-        $.post(
-            "{% url 'search-main' %}",
-            {
+        $.ajax("{% url 'search-main' %}", {
+            type: "POST",
+            data: JSON.stringify({
                 query: $("#search-query").val(),
                 backbone: $("#backbone-dropdown-button").text(),
-            },
-            function(response){
+            }),
+            success: function(response){
                 console.log(response)
-                // reset the height of the textarea
-                $("#search-query").height("")
-
-                // get all hits
-                hits = response["hits"]
-
-                // remove all previous searched documents
-                $(".search-results").html("")
-
-                // display hits in the search-results container
-                for (hit of hits){
-                    // here we must use the url string instead of the url name because it contains parameters
-                    var title = $("<a class='text-decoration-none' href='detail/" + hit._id + "/' target='_blank'>" + hit.title + "</a>")
-                    var abstract = $("<p>" + hit.abstract + "</p>")
-                    var frame = $("<div class='search-result'>")
-                    frame.append(title, abstract).appendTo($(".search-results"))
-                }
+                refresh_search_results(response)
+                refresh_facets(response)
             }
-        )
+        })
     })
+
 
     // press enter key to search
     // disable creating new line when pressing enter key
@@ -76,6 +65,126 @@
             $("#search-button").click();
         }
     });
+
+
+    // send faceted search (filter) when clicking facets
+    function process_facets(elem) {
+        let facets = new Array()
+
+        let agg_name = $(elem).attr("name")
+        const agg_array = agg_name.split("-")
+        agg_field = agg_array[1]
+        agg_type = agg_array[2]
+
+        // term aggregation corresponds to checkbox
+        if (agg_type == "term"){
+            let checks = $(`#facet-${agg_name} :input:checked`)
+            let facet = new Object()
+
+            // if no box is checked, it's equal to checking all of them
+            if (checks.length == 0) {
+                checks = $(`#facet-${agg_name} :input:not(checked)`)
+            }
+
+            let checked_labels = new Array()
+            for (check of checks){
+                var check = $(check)
+                let checked_label = $("label[for='"+check.attr('id')+"']").text()
+                checked_labels.push(checked_label)
+            }
+
+            // use terms filter for term aggregation
+            facet["terms"] = {
+                [agg_field]: checked_labels
+            }
+
+            facets.push(facet)
+        }
+        console.log(facets)
+
+        // wrap the element in jquery
+        $.ajax("{% url 'search-main' %}", {
+            // contentType: "application/json",
+            type: "POST",
+            data: JSON.stringify({
+                query: $("#search-query").val(),
+                backbone: $("#backbone-dropdown-button").text(),
+                facets: facets
+            }),
+            success: function(response){
+                console.log(response)
+                refresh_search_results(response)
+            }
+        })
+    }
+
+
+    function refresh_search_results(response) {
+        // reset the height of the textarea
+        $("#search-query").height("")
+
+        // get all hits
+        hits = response["hits"]
+
+        // remove all previous searched documents
+        $("#search-results").html("")
+
+        // display hits in the search-results container
+        for (hit of hits){
+            // here we must use the url string instead of the url name because it contains parameters
+            let frame = `<div class="search-result border border-info rounded-4 p-2 mb-2">
+                            <a class="text-decoration-none" href="detail/${hit._id}/", target="_blank">${hit.title}</a>
+                            <p class="mb-1">${hit.content}</p>
+                            <div class="d-flex justify-content-between">
+                                <span><small><em>${hit.court}</em></small></span>
+                                <span class="float-end"><small><em>${hit.date}</em></small></span>
+                            </div>
+                        </div>`
+            $("#search-results").append(frame)
+        }
+    }
+
+
+    function refresh_facets(response) {
+        // display facets
+        $("#search-facets").html("")
+
+        aggregations = response["aggregations"]
+
+        for ([agg_name, agg] of Object.entries(aggregations)) {
+            const agg_array = agg_name.split("-")
+            agg_field = agg_array[1]
+            agg_type = agg_array[2]
+            // one unique term for one bucket
+            if (agg_type == "term") {
+                // the field of the aggregation
+                buckets = agg["buckets"]
+                if (buckets.length > 0){
+                    // create the big div containing all the buckets of the terms aggreagtion
+                    // display by checkboxes
+                    let div = `<div id="facet-${agg_name}"><strong>${agg_field}:</strong></div>`
+                    $("#search-facets").append(div)
+
+                    for (let i = 0; i < buckets.length; i++) {
+                        bucket = buckets[i]
+
+                        key = bucket["key"]
+                        count = bucket["doc_count"]
+                        name = agg_name
+
+                        let checkbox = `<div class="form-check">
+                                            <input class='form-check-input' type="checkbox" name=${name} id="${name}-${i}" onclick="process_facets(this)">
+                                            <div class="d-flex justify-content-between">
+                                            <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
+                                            <span><small><em>${count}</em></small></span>
+                                        </div>`
+
+                        $(`#facet-${agg_name}`).append(checkbox)
+                    }
+                }
+            }
+        }
+    }
 
 </script>
 {% endblock %}

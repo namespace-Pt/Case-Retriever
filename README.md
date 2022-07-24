@@ -10,3 +10,17 @@
 cd app
 python manager.py runserver
 ```
+
+## Features
+### Searching
+- [x] search in chinese
+- [x] search multiple fields by one query
+- [x] knn search
+#### Highlighting
+- [x] highlight matching by bolding
+#### Facets
+- [x] term facets
+### Backend
+- django
+### Frontend
+- bootstrap
