@@ -3,7 +3,7 @@
 {% block body %}
 
 <div class="container">
-    <div class="input-group pt-3 pb-3 search-bar">
+    <div id="search-bar" class="input-group pt-3 pb-5">
         <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">BM25</button>
             <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
                 <li><h6 class="dropdown-header">Select Backbone</h6></li>
@@ -23,41 +23,40 @@
     </div>
 </div>
 
-<div class="row m-3">
-    <div class="col-2" id="search-facets">
+<div id="background" class="background">
+    <!-- donot use django template here because ajax is designed to async returning data, while template is used to refresh the entire page -->
+    <div class="row">
+        <div class="col-2 mr-2" id="search-facets">
+        </div>
+        <div class="col" id="search-results">
+        </div>
     </div>
-    <div class="col" id="search-results">
-        <!-- donot use django template here because ajax is designed to async returning data, while template is used to refresh the entire page -->
-    </div>
+
+    <nav>
+        <ul id="page-bar" class="pagination justify-content-center">
+        </ul>
+    </nav>
 </div>
 
+
 <script>
-    // set the text of backbone-dropdown-button by the clicked backbone
+
+    // declare hits in the global scope because we want to paginate over the hits
+    let hits = []
+    let max_doc_num_per_page = 20
+    let max_page = 0
+
+
     $(".dropdown-item").click(function(){
+        // set the text of backbone-dropdown-button by the clicked backbone
         $("#backbone-dropdown-button").text($(this).text())
     })
 
-    // send search post when clicking the button
-    $("#search-button").click(function(){
-        $.ajax("{% url 'search-main' %}", {
-            type: "POST",
-            data: JSON.stringify({
-                query: $("#search-query").val(),
-                backbone: $("#backbone-dropdown-button").text(),
-            }),
-            success: function(response){
-                console.log(response)
-                refresh_search_results(response)
-                refresh_facets(response)
-            }
-        })
-    })
 
-
-    // press enter key to search
-    // disable creating new line when pressing enter key
-    // to create new line, use shift+enter
     $("textarea").keydown(function(event){
+        // press enter key to search
+        // disable creating new line when pressing enter key
+        // to create new line, use shift+enter
         if (event.keyCode == 13 && !event.shiftKey)
         {
             // prevent default behavior
@@ -67,39 +66,171 @@
     });
 
 
-    // send faceted search (filter) when clicking facets
-    function process_facets(elem) {
-        let facets = new Array()
-
-        let agg_name = $(elem).attr("name")
-        const agg_array = agg_name.split("-")
-        agg_field = agg_array[1]
-        agg_type = agg_array[2]
-
-        // term aggregation corresponds to checkbox
-        if (agg_type == "term"){
-            let checks = $(`#facet-${agg_name} :input:checked`)
-            let facet = new Object()
-
-            // if no box is checked, it's equal to checking all of them
-            if (checks.length == 0) {
-                checks = $(`#facet-${agg_name} :input:not(checked)`)
+    $("#search-button").click(function(){
+        // send search post when clicking the button
+        $.ajax("{% url 'search-main' %}", {
+            type: "POST",
+            data: JSON.stringify({
+                query: $("#search-query").val(),
+                backbone: $("#backbone-dropdown-button").text(),
+            }),
+            success: function(response){
+                console.log(response)
+                initialize_global(response)
+                refresh_search_results()
+                refresh_facets(aggregations)
+                display_pages()
             }
+        })
+    })
 
-            let checked_labels = new Array()
-            for (check of checks){
-                var check = $(check)
-                let checked_label = $("label[for='"+check.attr('id')+"']").text()
-                checked_labels.push(checked_label)
+
+    function initialize_global(response) {
+        // initialize global variables according to hits
+        hits = response["hits"]
+        aggregations = response["aggregations"]
+        max_page = Math.ceil(hits.length / max_doc_num_per_page)
+    }
+
+
+    function refresh_search_results(start_idx=0) {
+        // reset the height of the textarea
+        $("#search-query").height("")
+
+        // remove all previous searched documents
+        $("#search-results").html("")
+        // scroll to the top of the page
+        document.documentElement.scrollTop = 0
+
+        if (hits.length){
+            $("#background").addClass("p-4")
+
+            // display hits in the search-results container
+            for (hit of hits.slice(start_idx, start_idx + max_doc_num_per_page)){
+                // here we must use the url string instead of the url name because it contains parameters
+                let frame = `<div class="search-result border border-light-5 rounded-4 p-2 mb-2">
+                                <button class="download-button"><i class="fa fa-download"></i></button><a class="text-decoration-none" href="detail/${hit._id}/", target="_blank">${hit.case_name}</a>
+                                <p class="mb-1">${hit.content}</p>
+                                <div class="d-flex justify-content-between">
+                                    <span><small><em>${hit.court_name}</em></small></span>
+                                    <span class="float-end"><small><em>${hit.publish_date}</em></small></span>
+                                </div>
+                            </div>`
+                $("#search-results").append(frame)
             }
-
-            // use terms filter for term aggregation
-            facet["terms"] = {
-                [agg_field]: checked_labels
-            }
-
-            facets.push(facet)
         }
+    }
+
+
+    function refresh_facets(aggregations) {
+        // display facets
+        $("#search-facets").html("")
+
+        for ([agg_name, agg] of Object.entries(aggregations)) {
+            const agg_array = agg_name.split("-")
+            agg_type = agg_array[1]
+            agg_field = agg_array[2]
+            // one unique term for one bucket
+            if (agg_type == "terms") {
+                // the field of the aggregation
+                buckets = agg["buckets"]
+                if (buckets.length > 0){
+                    // create the big div containing all the buckets of the terms aggreagtion
+                    // display by checkboxes
+                    let div = `<div id="facet-${agg_name}" class="mb-4"><strong>${agg_field}:</strong></div>`
+                    $("#search-facets").append(div)
+
+                    for (let i = 0; i < buckets.length; i++) {
+                        bucket = buckets[i]
+
+                        key = bucket["key"]
+                        count = bucket["doc_count"]
+                        name = agg_name
+
+                        let checkbox = `<div class="form-check">
+                                            <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets(this)">
+                                            <div class="d-flex justify-content-between">
+                                                <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
+                                                <span><small><em>${count}</em></small></span>
+                                            </div>
+                                        </div>`
+
+                        $(`#facet-${agg_name}`).append(checkbox)
+                    }
+                }
+            }
+        }
+    }
+
+
+    function display_pages() {
+        // initialize page display when displaying search results
+
+        let pre_page = `<li class="page-item disabled">
+                            <button class="page-link" onclick="process_pages(this)">Previous</button>
+                        </li>`
+        let next_page = `<li class="page-item">
+                            <button class="page-link" onclick="process_pages(this)">Next</button>
+                        </li>`
+
+        $("#page-bar").html("")
+        if (hits.length){
+            $("#page-bar").append(pre_page)
+            for (let i = 1; i <= max_page ; i ++){
+                let page = `<li class="page-item"><button class="page-link" onclick="process_pages(this)">${i}</button></li>`
+                $("#page-bar").append(page)
+            }
+            $("#page-bar").append(next_page)
+
+            // default to activate the first page
+            $(`#page-bar > li:eq(1)`).addClass("active")
+            // if there is only one page, disable the next button also
+            if (max_page == 1){
+                $(`#page-bar > li:eq(-1)`).addClass("disabled")
+            }
+        }
+    }
+
+
+    function process_facets(elem) {
+        // send faceted search (filter) when clicking facets
+        let facets = new Array()
+        let all_aggs = $("#search-facets > div")
+
+        for (agg of all_aggs){
+            id = agg.id
+            agg_array = id.split("-") // facet-agg-term-case_name
+            agg_type = agg_array[2]
+            agg_field = agg_array[3]
+
+            console.log(agg_type)
+
+            // term aggregation corresponds to checkbox
+            if (agg_type == "terms"){
+                let terms_facet = new Object()
+                let checks = $(`#${id} :input:checked`)
+
+                // if no box is checked, skip this facet
+                if (checks.length == 0) {
+                    continue
+                }
+                else{
+                    let checked_labels = new Array()
+                    for (check of checks){
+                        var check = $(check)
+                        let checked_label = $("label[for='"+check.attr('id')+"']").text()
+                        checked_labels.push(checked_label)
+                    }
+                    // use terms filter for term aggregation
+                    terms_facet["terms"] = {
+                        [agg_field]: checked_labels
+                    }
+                    facets.push(terms_facet)
+                }
+            }
+        }
+
+
         console.log(facets)
 
         // wrap the element in jquery
@@ -113,77 +244,61 @@
             }),
             success: function(response){
                 console.log(response)
-                refresh_search_results(response)
+                initialize_global(response)
+                refresh_search_results()
+                display_pages()
             }
         })
     }
 
 
-    function refresh_search_results(response) {
-        // reset the height of the textarea
-        $("#search-query").height("")
+    function process_pages(elem) {
+        // triggered when clicking any page button
+        // activate the clicked page item, disable others, then refresh search results
+        elem.blur()
 
-        // get all hits
-        hits = response["hits"]
+        clicked_page = $(elem).text()
+        current_page = parseInt($("#page-bar > .page-item.active > button").text())
 
-        // remove all previous searched documents
-        $("#search-results").html("")
-
-        // display hits in the search-results container
-        for (hit of hits){
-            // here we must use the url string instead of the url name because it contains parameters
-            let frame = `<div class="search-result border border-info rounded-4 p-2 mb-2">
-                            <a class="text-decoration-none" href="detail/${hit._id}/", target="_blank">${hit.title}</a>
-                            <p class="mb-1">${hit.content}</p>
-                            <div class="d-flex justify-content-between">
-                                <span><small><em>${hit.court}</em></small></span>
-                                <span class="float-end"><small><em>${hit.date}</em></small></span>
-                            </div>
-                        </div>`
-            $("#search-results").append(frame)
+        if (clicked_page == "Next"){
+            next_page = current_page + 1
         }
-    }
+        else if (clicked_page == "Previous"){
+            next_page = current_page - 1
+        }
+        else{
+            next_page = parseInt(clicked_page)
+        }
 
+        // reset activation status of the previous and next button
+        $(`#page-bar > li:eq(${current_page})`).removeClass("active")
+        // first enable the next and previous button
+        // then disable neither or either or both of them based on page idx
+        $(`#page-bar > li:eq(0)`).removeClass("disabled")
+        $(`#page-bar > li:eq(-1)`).removeClass("disabled")
+        if (next_page == 1){
+            $(`#page-bar > li:eq(0)`).addClass("disabled")
+        }
+        if (next_page == max_page){
+            $(`#page-bar > li:eq(-1)`).addClass("disabled")
+        }
 
-    function refresh_facets(response) {
-        // display facets
-        $("#search-facets").html("")
-
-        aggregations = response["aggregations"]
-
-        for ([agg_name, agg] of Object.entries(aggregations)) {
-            const agg_array = agg_name.split("-")
-            agg_field = agg_array[1]
-            agg_type = agg_array[2]
-            // one unique term for one bucket
-            if (agg_type == "term") {
-                // the field of the aggregation
-                buckets = agg["buckets"]
-                if (buckets.length > 0){
-                    // create the big div containing all the buckets of the terms aggreagtion
-                    // display by checkboxes
-                    let div = `<div id="facet-${agg_name}"><strong>${agg_field}:</strong></div>`
-                    $("#search-facets").append(div)
-
-                    for (let i = 0; i < buckets.length; i++) {
-                        bucket = buckets[i]
-
-                        key = bucket["key"]
-                        count = bucket["doc_count"]
-                        name = agg_name
-
-                        let checkbox = `<div class="form-check">
-                                            <input class='form-check-input' type="checkbox" name=${name} id="${name}-${i}" onclick="process_facets(this)">
-                                            <div class="d-flex justify-content-between">
-                                            <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
-                                            <span><small><em>${count}</em></small></span>
-                                        </div>`
-
-                        $(`#facet-${agg_name}`).append(checkbox)
-                    }
+        // i indicates the absolute page idx
+        // page_box_idx indicates the idx of the page box
+        // make sure the page doesn't overflow
+        console.log(max_page)
+        for (let i = Math.min(next_page - 2, max_page - 4), page_box_idx = 1; page_box_idx <= 5, i <= max_page; i ++){
+            if (i > 0){
+                $(`#page-bar > li:eq(${page_box_idx}) > button`).text(`${i}`)
+                // here we activate the proper page box
+                if (i == next_page){
+                    $(`#page-bar > li:eq(${page_box_idx})`).addClass("active")
                 }
+                page_box_idx ++
             }
         }
+
+        refresh_search_results(start_idx=(next_page - 1) * max_doc_num_per_page)
     }
 
 </script>

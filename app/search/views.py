@@ -7,26 +7,73 @@ from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 from elasticsearch import Elasticsearch
 from transformers import AutoModel, AutoTokenizer
-from .utils import dpr_encode
+from utils.encode import GenericPLMEncoder
 
 
 elastic = Elasticsearch(
     "http://localhost:9200"
 )
-default_index = "test-wenshu"
+default_index = "wenshu"
+search_size = 100
+facet_size = 10
 
 plm_dir = "data/model/DPR"
-dpr_model = AutoModel.from_pretrained(plm_dir)
+plm = AutoModel.from_pretrained(plm_dir)
 tokenizer = AutoTokenizer.from_pretrained(plm_dir)
+model = GenericPLMEncoder(plm=plm, tokenizer=tokenizer)
 
 
 
-def bm25_search(**kargs):
+def bm25_search(query, facets):
     """
     returning the processed hits, each element of which is a single document
     """
     resp = elastic.search(
-        **kargs
+        index=default_index,
+        source=False,
+        size=search_size,
+        query={
+            "combined_fields": {
+                "query": query,
+                "fields": ["case_name", "content"]
+            }
+        },
+        fields=["case_name", "content", {"field": "publish_date", "format": "year_month_day"}, "court_name", "cause"],
+        # set color
+        highlight={
+            "fields": {
+                "case_name": {
+                    "pre_tags" : ["<strong>"],
+                    "post_tags": ["</strong>"],
+                    "number_of_fragments": 1,
+                },
+                "content": {
+                    "pre_tags" : ["<strong>"],
+                    "post_tags": ["</strong>"],
+                    "number_of_fragments": 1,
+                }
+            }
+        },
+        aggs={
+            "agg-terms-court_name": {
+                # this terms means find unique terms to build buckets
+                "terms": {
+                    "field": "court_name",
+                    "size": facet_size
+                }
+            },
+            "agg-terms-case_type": {
+                "terms": {
+                    "field": "case_type",
+                    "size": facet_size
+                }
+            }
+        },
+        post_filter={
+            "bool": {
+                "filter": [facet for facet in facets]
+            }
+        } if facets is not None else None
     )
 
     hits = resp["hits"]["hits"]
@@ -38,10 +85,10 @@ def bm25_search(**kargs):
         fields = hit["fields"]
         # add [0] because elastic returns list by default
         new_hit = {
-            "title": fields["title"][0][:100],
-            "content": fields["content"][0][:500],
-            "court": fields["court"],
-            "date": fields["judge_date"]
+            "case_name": fields["case_name"][0][:100],
+            "content": fields["content"][0][:500] if "content" in fields else "EMPTY CONTENT!",
+            "court_name": fields["court_name"],
+            "publish_date": fields["publish_date"],
         }
         # FIXME: _id is not by the field
         new_hit["_id"] = hit["_id"]
@@ -62,12 +109,23 @@ def bm25_search(**kargs):
 def knn_search(**kargs):
     hits = elastic.knn_search(**kargs)["hits"]["hits"]
     processed_hits = []
+
     for hit in hits:
-        new_hit = {"_id": hit["_id"]}
-        new_hit["title"] = hit["_source"]["title"][:100]
-        new_hit["content"] = hit["_source"]["content"][:500]
+        fields = hit["fields"]
+        # add [0] because elastic returns list by default
+        new_hit = {
+            "title": fields["title"][0][:100],
+            "content": fields["content"][0][:500] if "content" in fields else "EMPTY CONTENT!",
+            "court": fields["court"],
+            "date": fields["judge_date"]
+        }
+        # FIXME: _id is not by the field
+        new_hit["_id"] = hit["_id"]
+        # set highlight with blue color
         processed_hits.append(new_hit)
-    return processed_hits
+    return {
+        "hits": processed_hits
+    }
 
 
 def main(request):
@@ -84,56 +142,19 @@ def main(request):
         facets = data.get("facets")
 
         if backbone == "bm25":
-            resp = bm25_search(
-                index=default_index,
-                query={
-                    "combined_fields": {
-                        "query": query,
-                        "fields": ["title", "content"]
-                    }
-                },
-                fields=["title", "content", {"field": "judge_date", "format": "year_month_day"}, "court", "_id"],
-                # set color
-                highlight={
-                    "fields": {
-                        "title": {
-                            "pre_tags" : ["<strong>"],
-                            "post_tags": ["</strong>"],
-                            "number_of_fragments": 2,
-                        },
-                        "content": {
-                            "pre_tags" : ["<strong>"],
-                            "post_tags": ["</strong>"],
-                            "number_of_fragments": 2,
-                        }
-                    }
-                },
-                aggs={
-                    "agg-court-term": {
-                        # this terms means find unique terms to build buckets
-                        "terms": {
-                            "field": "court"
-                        }
-                    }
-                },
-                post_filter={
-                    "bool": {
-                        "filter": [facet for facet in facets]
-                    }
-                } if facets is not None else None
-            )
+            resp = bm25_search(query, facets)
 
         elif backbone == "dpr":
             resp = knn_search(
                 index=default_index,
+                fields=["title", "content", {"field": "judge_date", "format": "year_month_day"}, "court"],
                 knn={
                     "field": "vector",
-                    "query_vector": dpr_encode(query, dpr_model, tokenizer),
+                    "query_vector": model.encode_single_query(query),
                     "k": 10,
                     # this is necessary
                     "num_candidates": 100
-                },
-                source=["title", "content"]
+                }
             )
 
         return JsonResponse(data=resp)

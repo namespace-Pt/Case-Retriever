@@ -5,7 +5,8 @@
 
 ## Instruction
 ```
-./elasticsearch
+bin/elasticsearch-plugin install analysis-smartcn
+bin/elasticsearch
 
 cd app
 python manager.py runserver
