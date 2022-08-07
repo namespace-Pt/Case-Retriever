@@ -1,11 +1,7 @@
 import json
-import numpy as np
 from urllib.parse import quote
-from tqdm import tqdm
-from django.shortcuts import render, redirect
-from django.template.loader import render_to_string
+from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
-from django.urls import reverse
 from elasticsearch import Elasticsearch
 from transformers import AutoModel, AutoTokenizer
 from utils.encode import GenericPLMEncoder
@@ -116,25 +112,38 @@ def bm25_search(query, facets, from_, size):
     }
 
 
-def knn_search(**kargs):
-    hits = elastic.knn_search(**kargs)["hits"]["hits"]
+def knn_search(query, facets, from_, size):
+    hits = elastic.knn_search(
+        index=default_index,
+        source=False,
+        fields=["case_name", "content", {"field": "publish_date", "format": "year_month_day"}, "court_name", "cause"],
+        knn={
+            "field": "vector",
+            "query_vector": model.encode_single_query(query),
+            "k": from_ + size,
+            # this is necessary
+            "num_candidates": 100
+        }
+    )["hits"]["hits"][from_:]
+
     processed_hits = []
 
     for hit in hits:
         fields = hit["fields"]
         # add [0] because elastic returns list by default
         new_hit = {
-            "title": fields["title"][0][:100],
+            "case_name": fields["case_name"][0][:100],
             "content": fields["content"][0][:500] if "content" in fields else "EMPTY CONTENT!",
-            "court": fields["court"],
-            "date": fields["judge_date"]
+            "court_name": fields["court_name"],
+            "publish_date": fields["publish_date"],
         }
         # FIXME: _id is not by the field
         new_hit["_id"] = hit["_id"]
         # set highlight with blue color
         processed_hits.append(new_hit)
     return {
-        "hits": processed_hits
+        "hits": processed_hits,
+        "total": size
     }
 
 
@@ -157,20 +166,9 @@ def main(request):
             resp = bm25_search(query, facets, from_, size)
 
         elif backbone == "类案查询":
-            resp = knn_search(
-                index=default_index,
-                fields=["title", "content", {"field": "judge_date", "format": "year_month_day"}, "court"],
-                knn={
-                    "field": "vector",
-                    "query_vector": model.encode_single_query(query),
-                    "k": 10,
-                    # this is necessary
-                    "num_candidates": 100
-                }
-            )
+            resp = knn_search(query, facets, from_, size)
 
         return JsonResponse(data=resp)
-
 
 
 def detail(request, id):
@@ -194,3 +192,4 @@ def debug(request):
         return render(request, "search/debug.html")
     elif request.method == "POST":
         return HttpResponse("fuck it")
+
