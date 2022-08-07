@@ -1,5 +1,6 @@
 import json
 import numpy as np
+from urllib.parse import quote
 from tqdm import tqdm
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
@@ -137,14 +138,14 @@ def main(request):
         data = json.loads(request.body)
 
         query = data["query"]
-        backbone = data["backbone"].lower()
+        backbone = data["backbone"]
         # use get to return None if the post doesn't contain facets
         facets = data.get("facets")
 
-        if backbone == "bm25":
+        if backbone == "关键词查询":
             resp = bm25_search(query, facets)
 
-        elif backbone == "dpr":
+        elif backbone == "类案查询":
             resp = knn_search(
                 index=default_index,
                 fields=["title", "content", {"field": "judge_date", "format": "year_month_day"}, "court"],
@@ -164,6 +165,17 @@ def main(request):
 def detail(request, id):
     hit = elastic.get(index=default_index, id=id)
     return render(request, "search/detail.html", hit["_source"])
+
+
+def download(request, id):
+    hit = elastic.get(index=default_index, id=id)["_source"]
+    # essential to quote the chinese so that the file name can be properly parsed
+    filename = quote(f"{hit['case_id']}.txt")
+    content = f"{hit['case_name']}\n{hit['content']}"
+    response = HttpResponse(content, content_type="text/plain")
+    # use string concatenation here instead of formatting
+    response["Content-Disposition"] = "attachment; filename=" + filename
+    return response
 
 
 def debug(request):

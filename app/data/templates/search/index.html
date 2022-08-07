@@ -4,18 +4,18 @@
 
 <div class="container">
     <div id="search-bar" class="input-group pt-3 pb-5">
-        <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">BM25</button>
+        <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">关键词查询</button>
             <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
-                <li><h6 class="dropdown-header">Select Backbone</h6></li>
-                <li><a class="dropdown-item" href="#">BM25</a></li>
-                <li><a class="dropdown-item" href="#">DPR</a></li>
+                <li><h6 class="dropdown-header">查询方式</h6></li>
+                <li><a class="dropdown-item" href="#">关键词查询</a></li>
+                <li><a class="dropdown-item" href="#">类案查询</a></li>
             </div>
 
         <!-- flex-grow-1 makes the first element under this div take up as much space as it can, remaining necessary space for other elements -->
         <div class="form-floating flex-grow-1">
             <!-- the placeholder is necessary here for the floating label to work -->
             <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder"></textarea>
-            <label for="search-query">Input Query...</label>
+            <label for="search-query">查询：</label>
         </div>
         <button class="btn btn-primary rounded-0" type="submit" id="search-button">
             search
@@ -45,6 +45,10 @@
     let hits = []
     let max_doc_num_per_page = 20
     let max_page = 0
+    let agg_field_dict = {
+        "court_name": "法院名称",
+        "case_type": "案件类型"
+    }
 
 
     $(".dropdown-item").click(function(){
@@ -109,13 +113,16 @@
             for (hit of hits.slice(start_idx, start_idx + max_doc_num_per_page)){
                 // here we must use the url string instead of the url name because it contains parameters
                 let frame = `<div class="search-result border border-light-5 rounded-4 p-2 mb-2">
-                                <button class="download-button"><i class="fa fa-download"></i></button><a class="text-decoration-none" href="detail/${hit._id}/", target="_blank">${hit.case_name}</a>
+                                <button class="download-button">
+                                    <a href="download/${hit._id}/" download><i class="fa fa-download"></i></a>
+                                </button>
+                                <a class="text-decoration-none" href="detail/${hit._id}/", target="_blank">${hit.case_name}</a>
                                 <p class="mb-1">${hit.content}</p>
                                 <div class="d-flex justify-content-between">
                                     <span><small><em>${hit.court_name}</em></small></span>
                                     <span class="float-end"><small><em>${hit.publish_date}</em></small></span>
                                 </div>
-                            </div>`
+                            </div>`//.replace('/n','')
                 $("#search-results").append(frame)
             }
         }
@@ -137,7 +144,7 @@
                 if (buckets.length > 0){
                     // create the big div containing all the buckets of the terms aggreagtion
                     // display by checkboxes
-                    let div = `<div id="facet-${agg_name}" class="mb-4"><strong>${agg_field}:</strong></div>`
+                    let div = `<div id="facet-${agg_name}" class="mb-4"><strong>${agg_field_dict[agg_field]}:</strong></div>`
                     $("#search-facets").append(div)
 
                     for (let i = 0; i < buckets.length; i++) {
