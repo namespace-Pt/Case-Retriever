@@ -42,12 +42,25 @@
 <script>
 
     // declare hits in the global scope because we want to paginate over the hits
+    // these are returned from the server side
     let hits = []
+    let aggregations = {}
+
+    // these are assigned on the client side (script)
+    let query = ""
+    let backbone = ""
+    let facets = []
+    let current_page = 1
+    let max_page = 5
+
+    // these are pre-defined parameters
     let max_doc_num_per_page = 20
-    let max_page = 0
+    // map the english field name to chinese when displaying on the facet bar
     let agg_field_dict = {
         "court_name": "法院名称",
-        "case_type": "案件类型"
+        "case_type": "案件类型",
+        "trial_round": "审理轮数",
+        "cause": "缘由"
     }
 
 
@@ -71,33 +84,58 @@
 
 
     $("#search-button").click(function(){
-        // send search post when clicking the button
-        $.ajax("{% url 'search-main' %}", {
-            type: "POST",
-            data: JSON.stringify({
-                query: $("#search-query").val(),
-                backbone: $("#backbone-dropdown-button").text(),
-            }),
-            success: function(response){
-                console.log(response)
-                initialize_global(response)
-                refresh_search_results()
-                refresh_facets(aggregations)
-                display_pages()
-            }
-        })
+        // unfocus the textarea and the button
+        $("#search-query").blur()
+        $("#search-button").blur()
+
+        search(
+            () => {refresh_facets(); display_pages()}
+        )
     })
 
 
-    function initialize_global(response) {
-        // initialize global variables according to hits
-        hits = response["hits"]
-        aggregations = response["aggregations"]
-        max_page = Math.ceil(hits.length / max_doc_num_per_page)
+    function search(callback=null, data=null) {
+        // send search post loading parameters from global variables
+        // if success, refresh search results and call extra callback functions
+
+        // default data
+        if (!data){
+            data = {
+                query: $("#search-query").val(),
+                backbone: $("#backbone-dropdown-button").text(),
+                size: max_doc_num_per_page,
+                from: (current_page - 1) * max_doc_num_per_page,
+                facets: facets
+            }
+        }
+
+        console.log(data)
+
+        $.ajax("{% url 'search-main' %}", {
+            type: "POST",
+            data: JSON.stringify(data),
+            success: function(response){
+
+                // update results and facets
+                hits = response["hits"]
+                aggregations = response["aggregations"]
+                // use the total number of possible hits to compute maximum page number
+                max_page = Math.ceil(response["total"] / max_doc_num_per_page)
+
+                console.log(aggregations)
+                refresh_search_results()
+                // refresh_facets()
+
+                console.log(callback)
+                if (callback) {
+                    callback()
+                }
+            }
+        })
     }
 
 
-    function refresh_search_results(start_idx=0) {
+    function refresh_search_results() {
         // reset the height of the textarea
         $("#search-query").height("")
 
@@ -110,7 +148,7 @@
             $("#background").addClass("p-4")
 
             // display hits in the search-results container
-            for (hit of hits.slice(start_idx, start_idx + max_doc_num_per_page)){
+            for (hit of hits){
                 // here we must use the url string instead of the url name because it contains parameters
                 let frame = `<div class="search-result border border-light-5 rounded-4 p-2 mb-2">
                                 <button class="download-button">
@@ -129,7 +167,7 @@
     }
 
 
-    function refresh_facets(aggregations) {
+    function refresh_facets() {
         // display facets
         $("#search-facets").html("")
 
@@ -155,7 +193,7 @@
                         name = agg_name
 
                         let checkbox = `<div class="form-check">
-                                            <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets(this)">
+                                            <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets()">
                                             <div class="d-flex justify-content-between">
                                                 <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
                                                 <span><small><em>${count}</em></small></span>
@@ -176,18 +214,19 @@
         let pre_page = `<li class="page-item disabled">
                             <button class="page-link" onclick="process_pages(this)">Previous</button>
                         </li>`
-        let next_page = `<li class="page-item">
+        let current_page = `<li class="page-item">
                             <button class="page-link" onclick="process_pages(this)">Next</button>
                         </li>`
 
         $("#page-bar").html("")
         if (hits.length){
             $("#page-bar").append(pre_page)
-            for (let i = 1; i <= max_page ; i ++){
+            // limit the page bar to length of 5
+            for (let i = 1; i <= Math.min(max_page, 5); i ++){
                 let page = `<li class="page-item"><button class="page-link" onclick="process_pages(this)">${i}</button></li>`
                 $("#page-bar").append(page)
             }
-            $("#page-bar").append(next_page)
+            $("#page-bar").append(current_page)
 
             // default to activate the first page
             $(`#page-bar > li:eq(1)`).addClass("active")
@@ -199,10 +238,11 @@
     }
 
 
-    function process_facets(elem) {
-        // send faceted search (filter) when clicking facets
-        let facets = new Array()
+    function process_facets() {
+        // capture all selected facets and return them in the elastic query format
         let all_aggs = $("#search-facets > div")
+        // empty previous facets
+        facets = []
 
         for (agg of all_aggs){
             id = agg.id
@@ -237,75 +277,66 @@
             }
         }
 
-
-        console.log(facets)
-
-        // wrap the element in jquery
-        $.ajax("{% url 'search-main' %}", {
-            // contentType: "application/json",
-            type: "POST",
-            data: JSON.stringify({
-                query: $("#search-query").val(),
-                backbone: $("#backbone-dropdown-button").text(),
-                facets: facets
-            }),
-            success: function(response){
-                console.log(response)
-                initialize_global(response)
-                refresh_search_results()
-                display_pages()
-            }
-        })
+        // reset current page to 1
+        current_page = 1
+        search(
+            () => {display_pages()}
+        )
     }
 
 
     function process_pages(elem) {
         // triggered when clicking any page button
-        // activate the clicked page item, disable others, then refresh search results
+        // activate the clicked page item, disable others
         elem.blur()
 
         clicked_page = $(elem).text()
-        current_page = parseInt($("#page-bar > .page-item.active > button").text())
-
+        // previous page is the old page idx
+        previous_page = parseInt($("#page-bar > .page-item.active > button").text())
+        // modify the global current page parameter
         if (clicked_page == "Next"){
-            next_page = current_page + 1
+            current_page = previous_page + 1
         }
         else if (clicked_page == "Previous"){
-            next_page = current_page - 1
+            current_page = previous_page - 1
         }
         else{
-            next_page = parseInt(clicked_page)
+            current_page = parseInt(clicked_page)
         }
 
         // reset activation status of the previous and next button
-        $(`#page-bar > li:eq(${current_page})`).removeClass("active")
+        $(`#page-bar > li:eq(${previous_page})`).removeClass("active")
         // first enable the next and previous button
         // then disable neither or either or both of them based on page idx
         $(`#page-bar > li:eq(0)`).removeClass("disabled")
         $(`#page-bar > li:eq(-1)`).removeClass("disabled")
-        if (next_page == 1){
+        if (current_page == 1){
             $(`#page-bar > li:eq(0)`).addClass("disabled")
         }
-        if (next_page == max_page){
+        if (current_page == max_page){
             $(`#page-bar > li:eq(-1)`).addClass("disabled")
         }
 
         // i indicates the absolute page idx
         // page_box_idx indicates the idx of the page box
         // make sure the page doesn't overflow
-        console.log(max_page)
-        for (let i = Math.min(next_page - 2, max_page - 4), page_box_idx = 1; page_box_idx <= 5, i <= max_page; i ++){
+        let page_box_idx = 1
+        for (let i = Math.min(current_page - 2, max_page - 4); i <= max_page; i ++){
+            if (page_box_idx > 5){
+                break
+            }
+
             if (i > 0){
                 $(`#page-bar > li:eq(${page_box_idx}) > button`).text(`${i}`)
                 // here we activate the proper page box
-                if (i == next_page){
+                if (i == current_page){
                     $(`#page-bar > li:eq(${page_box_idx})`).addClass("active")
                 }
                 page_box_idx ++
             }
         }
 
-        refresh_search_results(start_idx=(next_page - 1) * max_doc_num_per_page)
+        search()
     }
 
 </script>

@@ -15,7 +15,6 @@ elastic = Elasticsearch(
     "http://localhost:9200"
 )
 default_index = "wenshu"
-search_size = 100
 facet_size = 10
 
 plm_dir = "data/model/DPR"
@@ -25,14 +24,15 @@ model = GenericPLMEncoder(plm=plm, tokenizer=tokenizer)
 
 
 
-def bm25_search(query, facets):
+def bm25_search(query, facets, from_, size):
     """
     returning the processed hits, each element of which is a single document
     """
     resp = elastic.search(
         index=default_index,
         source=False,
-        size=search_size,
+        size=size if size is not None else 20,
+        from_=from_ if from_ is not None else 0,
         query={
             "combined_fields": {
                 "query": query,
@@ -68,6 +68,12 @@ def bm25_search(query, facets):
                     "field": "case_type",
                     "size": facet_size
                 }
+            },
+            "agg-terms-cause": {
+                "terms": {
+                    "field": "cause",
+                    "size": facet_size
+                }
             }
         },
         post_filter={
@@ -79,6 +85,8 @@ def bm25_search(query, facets):
 
     hits = resp["hits"]["hits"]
     aggregations = resp["aggregations"]
+    # get total hits
+    total = resp["hits"]["total"]["value"]
 
     processed_hits = []
     # merge _source and hightlight when the highlight field is missing
@@ -103,7 +111,8 @@ def bm25_search(query, facets):
 
     return {
         "hits": processed_hits,
-        "aggregations": aggregations
+        "aggregations": aggregations,
+        "total": total
     }
 
 
@@ -141,9 +150,11 @@ def main(request):
         backbone = data["backbone"]
         # use get to return None if the post doesn't contain facets
         facets = data.get("facets")
+        from_ = data.get("from")
+        size = data.get("size")
 
         if backbone == "关键词查询":
-            resp = bm25_search(query, facets)
+            resp = bm25_search(query, facets, from_, size)
 
         elif backbone == "类案查询":
             resp = knn_search(
