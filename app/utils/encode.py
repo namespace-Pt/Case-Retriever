@@ -1,21 +1,24 @@
+import re
 import os
 import json
 import torch
 import argparse
 import subprocess
 import numpy as np
+import torch.nn.functional as F
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
 
 
 
 class GenericPLMEncoder(torch.nn.Module):
-    def __init__(self, plm, tokenizer, device="cpu", pooling_method="cls"):
+    def __init__(self, plm, tokenizer, device="cpu", pooling_method="cls", metric="cos"):
         super().__init__()
         self.plm = plm
         self.tokenizer = tokenizer
         self.pooling_method = pooling_method
         self.device = device
+        self.metric = metric
 
         self.output_dim = self.plm.config.hidden_size
         self.max_length = self.plm.config.max_position_embeddings
@@ -30,7 +33,12 @@ class GenericPLMEncoder(torch.nn.Module):
             inputs[k] = v.to(self.device, non_blocking=True)
 
         if self.pooling_method == "cls":
-            return self.plm(**inputs)[0][:, 0]
+            embedding = self.plm(**inputs)[0][:, 0]
+
+        if self.metric == "cos":
+            embedding = F.normalize(embedding, dim=-1)
+
+        return embedding
 
 
     def encode_text(self, text_path, save_dir, batch_size=200):
@@ -54,16 +62,27 @@ class GenericPLMEncoder(torch.nn.Module):
                         embedding = self._encode(batch_text).cpu().numpy()
                         text_embeddings[i - batch_size: i] = embedding
                     batch_text = []
-                batch_text.append(" ".join([case["title"] if "title" in case else "", case["content"] if "content" in case else ""]))
+                text = case["content"].replace("\n", "")
+                text = re.search("指控：(.*)").group(1)
+
+                batch_text.append()
+
+            if len(batch_text):
+                text_embeddings[-len(batch_text):] = self._encode(batch_text).cpu().numpy()
 
         return text_embeddings
 
 
-    def encode_single_query(self, query):
+    def encode_single_query(self, query, max_length=None):
         """ encode a single query
         """
-        embedding = self._encode([query]).squeeze(0).tolist()
-        return embedding
+        if max_length:
+            self.max_length = max_length
+
+        embedding = self._encode([query.replace("\n", "")])
+        if self.metric == "cos":
+            embedding = F.normalize(embedding, dim=-1)
+        return embedding.squeeze(0).tolist()
 
 
 
@@ -74,14 +93,16 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=lambda x: int(x) if x != "cpu" else "cpu", default=0)
     parser.add_argument("--batch_size", type=int, default=200)
     parser.add_argument("--pooling_method", choices=["cls"], default="cls")
+    parser.add_argument("--metric", choices=["l2", "cos"], default="cos")
     args = parser.parse_args()
 
 
     plm = AutoModel.from_pretrained(os.path.join("data", "model", args.model)).to(args.device)
     tokenizer = AutoTokenizer.from_pretrained(os.path.join("data", "model", args.model))
 
-    model = GenericPLMEncoder(plm=plm, tokenizer=tokenizer, device=args.device, pooling_method=args.pooling_method)
+    model = GenericPLMEncoder(plm=plm, tokenizer=tokenizer, device=args.device, pooling_method=args.pooling_method, metric=args.metric)
 
-    text_path = f"/home/peitian_zhang/Data/{args.data}/wenshu1.json"
-    save_dir = os.path.join("data", "encode", args.model, args.data)
+    file = "p4.filtered"
+    text_path = f"/home/peitian_zhang/Data/{args.data}/{file}"
+    save_dir = os.path.join("data", "encode", args.model, args.data, file)
     model.encode_text(text_path, save_dir, batch_size=args.batch_size)

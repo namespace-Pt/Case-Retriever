@@ -25,10 +25,10 @@
 
 <div id="background" class="background">
     <!-- donot use django template here because ajax is designed to async returning data, while template is used to refresh the entire page -->
-    <div class="row">
-        <div class="col-2 mr-2" id="search-facets">
+    <div class="horizontal-align-content">
+        <div class="" style="width: 25%; margin-left: 20px; margin-right: 70px;" id="search-facets">
         </div>
-        <div class="col" id="search-results">
+        <div class="" style="width: 90%; margin-right: 20px" id="search-results">
         </div>
     </div>
 
@@ -45,6 +45,10 @@
     // these are returned from the server side
     let hits = []
     let aggregations = {}
+    // number of all hitted documents
+    let total = 0
+    // time taken in seconds
+    let took = 0
 
     // these are assigned on the client side (script)
     let query = ""
@@ -60,7 +64,8 @@
         "court_name": "法院名称",
         "case_type": "案件类型",
         "trial_round": "审理轮数",
-        "cause": "缘由"
+        "cause": "缘由",
+        "pub_prosecution_org": "审理机关名称"
     }
 
 
@@ -121,12 +126,13 @@
                 aggregations = response["aggregations"]
                 // use the total number of possible hits to compute maximum page number
                 max_page = Math.ceil(response["total"] / max_doc_num_per_page)
+                total = response["total"]
+                took = response["took"]
 
-                console.log(aggregations)
+                console.log(response)
                 refresh_search_results()
                 // refresh_facets()
 
-                console.log(callback)
                 if (callback) {
                     callback()
                 }
@@ -146,6 +152,9 @@
 
         if (hits.length){
             $("#background").addClass("p-4")
+
+            let efficiency_bar = `<span><em style="font-size:smaller; color: grey;">about ${total} results in ${took}s</em></span>`
+            $("#search-results").append(efficiency_bar)
 
             // display hits in the search-results container
             for (hit of hits){
@@ -171,36 +180,38 @@
         // display facets
         $("#search-facets").html("")
 
-        for ([agg_name, agg] of Object.entries(aggregations)) {
-            const agg_array = agg_name.split("-")
-            agg_type = agg_array[1]
-            agg_field = agg_array[2]
-            // one unique term for one bucket
-            if (agg_type == "terms") {
-                // the field of the aggregation
-                buckets = agg["buckets"]
-                if (buckets.length > 0){
-                    // create the big div containing all the buckets of the terms aggreagtion
-                    // display by checkboxes
-                    let div = `<div id="facet-${agg_name}" class="mb-4"><strong>${agg_field_dict[agg_field]}:</strong></div>`
-                    $("#search-facets").append(div)
+        if (aggregations){
+            for ([agg_name, agg] of Object.entries(aggregations)) {
+                const agg_array = agg_name.split("-")
+                agg_type = agg_array[1]
+                agg_field = agg_array[2]
+                // one unique term for one bucket
+                if (agg_type == "terms") {
+                    // the field of the aggregation
+                    buckets = agg["buckets"]
+                    if (buckets.length > 0){
+                        // create the big div containing all the buckets of the terms aggreagtion
+                        // display by checkboxes
+                        let div = `<div id="facet-${agg_name}" class="mb-4"><strong>${agg_field_dict[agg_field]}:</strong></div>`
+                        $("#search-facets").append(div)
 
-                    for (let i = 0; i < buckets.length; i++) {
-                        bucket = buckets[i]
+                        for (let i = 0; i < buckets.length; i++) {
+                            bucket = buckets[i]
 
-                        key = bucket["key"]
-                        count = bucket["doc_count"]
-                        name = agg_name
+                            key = bucket["key"]
+                            count = bucket["doc_count"]
+                            name = agg_name
 
-                        let checkbox = `<div class="form-check">
-                                            <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets()">
-                                            <div class="d-flex justify-content-between">
-                                                <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
-                                                <span><small><em>${count}</em></small></span>
-                                            </div>
-                                        </div>`
+                            let checkbox = `<div class="form-check">
+                                                <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets()">
+                                                <div class="d-flex justify-content-between">
+                                                    <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
+                                                    <span><small><em>${count}</em></small></span>
+                                                </div>
+                                            </div>`
 
-                        $(`#facet-${agg_name}`).append(checkbox)
+                            $(`#facet-${agg_name}`).append(checkbox)
+                        }
                     }
                 }
             }

@@ -70,6 +70,18 @@ def bm25_search(query, facets, from_, size):
                     "field": "cause",
                     "size": facet_size
                 }
+            },
+            "agg-terms-trial_round": {
+                "terms": {
+                    "field": "trial_round",
+                    "size": 5
+                }
+            },
+            "agg-terms-pub_prosecution_org":{
+                "terms": {
+                    "field": "pub_prosecution_org",
+                    "size": 5
+                }
             }
         },
         post_filter={
@@ -83,6 +95,7 @@ def bm25_search(query, facets, from_, size):
     aggregations = resp["aggregations"]
     # get total hits
     total = resp["hits"]["total"]["value"]
+    took = round(resp["took"] / 1000, 2)
 
     processed_hits = []
     # merge _source and hightlight when the highlight field is missing
@@ -90,7 +103,7 @@ def bm25_search(query, facets, from_, size):
         fields = hit["fields"]
         # add [0] because elastic returns list by default
         new_hit = {
-            "case_name": fields["case_name"][0][:100],
+            "case_name": fields["case_name"][0][:100] if "case_name" in fields else "EMPTY CASE_NAME!",
             "content": fields["content"][0][:500] if "content" in fields else "EMPTY CONTENT!",
             "court_name": fields["court_name"],
             "publish_date": fields["publish_date"],
@@ -108,26 +121,36 @@ def bm25_search(query, facets, from_, size):
     return {
         "hits": processed_hits,
         "aggregations": aggregations,
-        "total": total
+        "total": total,
+        "took": took
     }
 
 
 def knn_search(query, facets, from_, size):
-    hits = elastic.knn_search(
+    for x in ("指控：", "经审理查明，", "诉称：", "诉讼请求：", "理由："):
+        idx = query.rfind(x)
+        if idx != -1:
+            break
+    if idx != -1:
+        query = query[idx:]
+
+    resp = elastic.knn_search(
         index=default_index,
         source=False,
         fields=["case_name", "content", {"field": "publish_date", "format": "year_month_day"}, "court_name", "cause"],
         knn={
             "field": "vector",
-            "query_vector": model.encode_single_query(query),
-            "k": from_ + size,
+            "query_vector": model.encode_single_query(query, max_length=256),
+            "k": 1000,
             # this is necessary
-            "num_candidates": 100
+            "num_candidates": 1000
         }
-    )["hits"]["hits"][from_:]
+    )
+
+    hits = resp["hits"]["hits"][from_: from_ + size]
+    took = round(resp["took"] / 1000, 2)
 
     processed_hits = []
-
     for hit in hits:
         fields = hit["fields"]
         # add [0] because elastic returns list by default
@@ -141,9 +164,11 @@ def knn_search(query, facets, from_, size):
         new_hit["_id"] = hit["_id"]
         # set highlight with blue color
         processed_hits.append(new_hit)
+
     return {
         "hits": processed_hits,
-        "total": size
+        "total": 1000,
+        "took": took
     }
 
 
