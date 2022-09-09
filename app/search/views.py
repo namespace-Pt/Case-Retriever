@@ -20,21 +20,34 @@ model = GenericPLMEncoder(plm=plm, tokenizer=tokenizer)
 
 
 
-def bm25_search(query, facets, from_, size):
+def search(query, backbone, facets, from_, size):
     """
     returning the processed hits, each element of which is a single document
     """
+    query_dict = {}
+    if backbone == "关键词查询":
+        query_dict["query"] = {
+            "combined_fields": {
+                "query": query,
+                "fields": ["case_name", "content"]
+            }
+        }
+    elif backbone == "类案查询":
+        query_dict["knn"] = {
+            "field": "vector",
+            "query_vector": model.encode_single_query(query, max_length=256),
+            "k": 1000,
+            # this is necessary
+            "num_candidates": 1000
+        }
+
     resp = elastic.search(
         index=default_index,
         source=False,
         size=size if size is not None else 20,
         from_=from_ if from_ is not None else 0,
-        query={
-            "combined_fields": {
-                "query": query,
-                "fields": ["case_name", "content"]
-            }
-        },
+        # here we insert the query string, it's either bm25 search or vector search
+        **query_dict,
         fields=["case_name", "content", {"field": "publish_date", "format": "year_month_day"}, "court_name", "cause"],
         # set color
         highlight={
@@ -111,9 +124,10 @@ def bm25_search(query, facets, from_, size):
         # FIXME: _id is not by the field
         new_hit["_id"] = hit["_id"]
 
-        # first assign the highlighted text
-        for k, v in hit["highlight"].items():
-            new_hit[k] = v[0]
+        if "highlight" in hit:
+            # assign the highlighted text to overwrite the original text
+            for k, v in hit["highlight"].items():
+                new_hit[k] = v[0]
 
         # set highlight with blue color
         processed_hits.append(new_hit)
@@ -122,52 +136,6 @@ def bm25_search(query, facets, from_, size):
         "hits": processed_hits,
         "aggregations": aggregations,
         "total": total,
-        "took": took
-    }
-
-
-def knn_search(query, facets, from_, size):
-    for x in ("指控：", "经审理查明，", "诉称：", "诉讼请求：", "理由："):
-        idx = query.rfind(x)
-        if idx != -1:
-            break
-    if idx != -1:
-        query = query[idx:]
-
-    resp = elastic.knn_search(
-        index=default_index,
-        source=False,
-        fields=["case_name", "content", {"field": "publish_date", "format": "year_month_day"}, "court_name", "cause"],
-        knn={
-            "field": "vector",
-            "query_vector": model.encode_single_query(query, max_length=256),
-            "k": 1000,
-            # this is necessary
-            "num_candidates": 1000
-        }
-    )
-
-    hits = resp["hits"]["hits"][from_: from_ + size]
-    took = round(resp["took"] / 1000, 2)
-
-    processed_hits = []
-    for hit in hits:
-        fields = hit["fields"]
-        # add [0] because elastic returns list by default
-        new_hit = {
-            "case_name": fields["case_name"][0][:100],
-            "content": fields["content"][0][:500] if "content" in fields else "EMPTY CONTENT!",
-            "court_name": fields["court_name"],
-            "publish_date": fields["publish_date"],
-        }
-        # FIXME: _id is not by the field
-        new_hit["_id"] = hit["_id"]
-        # set highlight with blue color
-        processed_hits.append(new_hit)
-
-    return {
-        "hits": processed_hits,
-        "total": 1000,
         "took": took
     }
 
@@ -187,11 +155,7 @@ def main(request):
         from_ = data.get("from")
         size = data.get("size")
 
-        if backbone == "关键词查询":
-            resp = bm25_search(query, facets, from_, size)
-
-        elif backbone == "类案查询":
-            resp = knn_search(query, facets, from_, size)
+        resp = search(query, backbone, facets, from_, size)
 
         return JsonResponse(data=resp)
 

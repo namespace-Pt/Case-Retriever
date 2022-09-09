@@ -1,5 +1,5 @@
 ## Environments
-- `elasticsearch==8.3.2`
+- `elasticsearch==8.4.1`
 - `django==4.0.3`
 - `bootstrap==5.1.3`
 

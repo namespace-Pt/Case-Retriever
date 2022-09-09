@@ -44,6 +44,7 @@ class GenericPLMEncoder(torch.nn.Module):
     def encode_text(self, text_path, save_dir, batch_size=200):
         """ encode the text in text path into dense vectors by plm
         """
+        print(f"encoding {text_path} and saving at {save_dir}...")
         text_num = int(subprocess.check_output(["wc", "-l", text_path]).decode("utf-8").split()[0])
         os.makedirs(save_dir, exist_ok=True)
         text_embeddings = np.memmap(
@@ -62,10 +63,7 @@ class GenericPLMEncoder(torch.nn.Module):
                         embedding = self._encode(batch_text).cpu().numpy()
                         text_embeddings[i - batch_size: i] = embedding
                     batch_text = []
-                text = case["content"].replace("\n", "")
-                text = re.search("指控：(.*)").group(1)
-
-                batch_text.append()
+                batch_text.append(case["tf_content"])
 
             if len(batch_text):
                 text_embeddings[-len(batch_text):] = self._encode(batch_text).cpu().numpy()
@@ -90,6 +88,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="DPR")
     parser.add_argument("--data", default="wenshu")
+    parser.add_argument("--file", default="p5.filtered.txt")
     parser.add_argument("--device", type=lambda x: int(x) if x != "cpu" else "cpu", default=0)
     parser.add_argument("--batch_size", type=int, default=200)
     parser.add_argument("--pooling_method", choices=["cls"], default="cls")
@@ -102,7 +101,6 @@ if __name__ == "__main__":
 
     model = GenericPLMEncoder(plm=plm, tokenizer=tokenizer, device=args.device, pooling_method=args.pooling_method, metric=args.metric)
 
-    file = "p4.filtered"
-    text_path = f"/home/peitian_zhang/Data/{args.data}/{file}"
-    save_dir = os.path.join("data", "encode", args.model, args.data, file)
+    text_path = f"../../../Data/{args.data}/{args.file}"
+    save_dir = os.path.join("data", "encode", args.model, args.data, args.file)
     model.encode_text(text_path, save_dir, batch_size=args.batch_size)
