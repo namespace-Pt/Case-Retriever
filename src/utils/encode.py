@@ -45,6 +45,7 @@ class GenericPLMEncoder(torch.nn.Module):
         """ encode the text in text path into dense vectors by plm
         """
         print(f"encoding {text_path} and saving at {save_dir}...")
+
         text_num = int(subprocess.check_output(["wc", "-l", text_path]).decode("utf-8").split()[0])
         os.makedirs(save_dir, exist_ok=True)
         text_embeddings = np.memmap(
@@ -84,29 +85,13 @@ class GenericPLMEncoder(torch.nn.Module):
 
 
 
-def filter_text(text):
-    text = text.replace("/n", "")
-
-    for x in ("指控：", "指控，", "查明：", "查明，", "诉称：", "诉称，", "请求：", "理由：", "认定：", "认定:", "认定，", "查认为，"):
-        idx = text.rfind(x)
-        if idx != -1:
-            break
-
-    if idx != -1:
-        text = text[idx:]
-        return text, 1
-    else:
-        text = text
-        return text, 0
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="DPR")
     parser.add_argument("--data", default="wenshu")
-    parser.add_argument("--file", default="p5.txt")
+    parser.add_argument("--file", default="p4.filtered.txt")
     parser.add_argument("--device", type=lambda x: int(x) if x != "cpu" else "cpu", default=0)
-    parser.add_argument("--batch_size", type=int, default=200)
+    parser.add_argument("--batch_size", type=int, default=100)
     parser.add_argument("--pooling_method", choices=["cls"], default="cls")
     parser.add_argument("--metric", choices=["l2", "cos"], default="cos")
     args = parser.parse_args()
@@ -117,42 +102,8 @@ if __name__ == "__main__":
 
     model = GenericPLMEncoder(plm=plm, tokenizer=tokenizer, device=args.device, pooling_method=args.pooling_method, metric=args.metric)
 
-    # filter text
-    skipped = 0
-    name, extension = args.file.split(".")
-    filtered_name = ".".join([name, "filtered", extension])
-
-    with open(f"../../../Data/{args.data}/{args.file}", encoding="utf-8") as f, open(f"../../../Data/{args.data}/{filtered_name}", "w", encoding="utf-8") as g:
-        for i, line in enumerate(tqdm(f)):
-            fields = json.loads(line.strip())
-
-            if fields["basics_text"]:
-                content = fields["basics_text"].replace("/n", "")
-            else:
-                content = fields["content"]
-                if not content:
-                    skipped += 1
-                    continue
-                else:
-                    content = content.replace("\n", "")
-                    for x in ("指控：", "指控，", "查明：", "查明，", "诉称：", "诉称，", "请求：", "理由：", "认定：", "认定:", "认定，", "查认为，"):
-                        idx = content.rfind(x)
-                        if idx != -1:
-                            break
-                    if idx == -1:
-                        skipped += 1
-                        # print(content)
-                        # if skipped > 10:
-                        #     break
-                        continue
-                    else:
-                        content = content[idx:]
-            # write filter content to a new field
-            fields["tf_content"] = content
-            g.write(json.dumps(fields, ensure_ascii=False) + "\n")
-
-    skipped
-
     text_path = f"../../../Data/{args.data}/{args.file}"
-    save_dir = os.path.join("data", "encode", args.model, args.data, args.file)
+    name = ".".join(args.file.split(".")[:-1])
+
+    save_dir = os.path.join("data", "encode", args.model, args.data, name)
     model.encode_text(text_path, save_dir, batch_size=args.batch_size)

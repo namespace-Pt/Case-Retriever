@@ -4,11 +4,13 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from elasticsearch import Elasticsearch
 from transformers import AutoModel, AutoTokenizer
-from utils.encode import GenericPLMEncoder, filter_text
+from utils.encode import GenericPLMEncoder
+from utils.filter import filter_text
 
 
 elastic = Elasticsearch(
-    "http://localhost:9200"
+    "http://localhost:9200",
+    request_timeout=1000000
 )
 default_index = "wenshu"
 facet_size = 10
@@ -34,7 +36,6 @@ def search(query, backbone, facets, from_, size):
         }
     elif backbone == "类案查询":
         query, _ = filter_text(query)
-        print(query)
 
         query_dict["knn"] = {
             "field": "vector",
