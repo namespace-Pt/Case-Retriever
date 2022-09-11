@@ -28,12 +28,25 @@ def search(query, backbone, facets, from_, size):
     """
     query_dict = {}
     if backbone == "关键词查询":
-        query_dict["query"] = {
-            "combined_fields": {
-                "query": query,
-                "fields": ["case_name", "content"]
+        # if the query is wrapped in a quote, then find exact match of the entire sentence
+        if query[0] in "\'\"“" and query[-1] in "\'\"”":
+            # search the exact match
+            query_dict["query"] = {
+                "multi_match" : {
+                    "query": query,
+                    "type": "phrase",
+                    "fields": ["case_name", "content"]
+                }
             }
-        }
+        # search the query appearance in several fields
+        else:
+            query_dict["query"] = {
+                "combined_fields": {
+                    "query": query,
+                    "fields": ["case_name", "content"],
+                }
+            }
+
     elif backbone == "类案查询":
         query, _ = filter_text(query)
 
