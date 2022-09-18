@@ -1,62 +1,78 @@
+import re
 import argparse
 import json
 from tqdm import tqdm
 
+patterns = [
+    (re.compile("(本院)?(经审理)?(认定|查明)(本案)?(事实如下)?.(.*)(本院|合议庭评议).*认为"), 6),
+    (re.compile("(本院)?(确认)(以下|如下)(法律|案件)?(事实).(.*)(本院|合议庭评议).*认为"), 6),
+    (re.compile("(事实和理由|具体事实)(如下)?.(.*)本院.*认为"), 3),
+    (re.compile("公诉机关指控.(.*)公诉机关认为"), 1),
+]
+
 
 def filter_text(text):
-    text = text.replace("/n", "")
+    """ extract basic text
+    """
+    text = text.replace("\n", "")
 
-    for x in ("指控：", "指控，", "查明：", "查明，", "诉称：", "诉称，", "请求：", "理由：", "认定：", "认定:", "认定，", "查认为，"):
-        idx = text.find(x)
-        if idx != -1:
-            break
+    for pattern in patterns:
+        basic_text = re.search(pattern[0], text)
+        if basic_text:
+            return basic_text.group(pattern[1]), 1
 
-    if idx != -1:
-        text = text[idx:]
-        return text, 1
-    else:
-        text = text
-        return text, 0
+    return text, 0
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="wenshu")
-    parser.add_argument("--file", default="p4.txt")
+    parser.add_argument("--file", default="p2-1.txt")
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=0)
+    parser.add_argument("--debug", action="store_true", default=False)
 
     args = parser.parse_args()
 
     name, extension = args.file.split(".")
-    filtered_name = ".".join([name, "filtered", extension])
+    tf_name = ".".join([name, "filtered", extension])
 
     # filter text
     skipped = 0
-    print(f"filtering {args.file}, the output will be save at {filtered_name}...")
+    print(f"filtering {args.file}, the output will be saved at {tf_name}...")
 
-    with open(f"../../../Data/{args.data}/{args.file}", encoding="utf-8") as f, open(f"../../../Data/{args.data}/{filtered_name}", "w", encoding="utf-8") as g:
+    with open(f"../../../Data/{args.data}/{args.file}", encoding="utf-8") as f, open(f"../../../Data/{args.data}/{tf_name}", "w", encoding="utf-8") as g:
         for i, line in enumerate(tqdm(f)):
             if i < args.start:
                 continue
-            elif i > args.end and args.end > 0:
+            elif i >= args.end and args.end > 0:
                 break
 
             fields = json.loads(line.strip())
 
             if fields["basics_text"]:
-                content = fields["basics_text"].replace("/n", "")
-                filtered = 1
+                content = fields["basics_text"].replace("\n", "")
+                is_valid = 1
+            elif fields["content"]:
+                content = fields["content"].replace("\n", "")
+                content, is_valid = filter_text(content)
             else:
-                content = fields["content"].replace("/n", "")
-                if not content:
-                    skipped += 1
-                    continue
-                content, filtered = filter_text(content)
+                is_valid = 0
 
-            skipped += 1 - filtered
+            skipped += 1 - is_valid
+
             # write filter content to a new field
-            fields["tf_content"] = content
+            if is_valid:
+                fields["tf_content"] = content
+            else:
+                if args.debug:
+                    print(fields["content"])
+                    if skipped == 50:
+                        break
+                    continue
+
             g.write(json.dumps(fields, ensure_ascii=False) + "\n")
 
-    print(f"{i + 1 - skipped} documents are filtered, {skipped} documents are skipped!")
+    print(f"{i + 1 - skipped} documents are kept, {skipped} documents are skipped!")
+
+    json.dump({"valid_tf_content_count": i + 1 - skipped}, open(f"../../../Data/{args.data}/{tf_name}.stat", "w", encoding="utf-8"))

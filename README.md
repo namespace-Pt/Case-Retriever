@@ -25,3 +25,6 @@ python manager.py runserver
 - django
 ### Frontend
 - bootstrap
+
+
+1. 裁定书很少包含案情

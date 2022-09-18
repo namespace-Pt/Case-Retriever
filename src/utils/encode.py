@@ -25,12 +25,16 @@ class GenericPLMEncoder(torch.nn.Module):
 
 
     @torch.no_grad()
-    def _encode(self, x):
+    def _encode(self, x, max_length=None):
         """ encode a list of text into tensors
         """
-        inputs = self.tokenizer(x, return_tensors="pt", max_length=self.max_length, truncation=True, padding="max_length")
-        for k, v in inputs.items():
-            inputs[k] = v.to(self.device, non_blocking=True)
+        if not max_length:
+            max_length = self.max_length
+        inputs = self.tokenizer(x, return_tensors="pt", max_length=max_length, truncation=True, padding="max_length")
+
+        if self.device != "cpu":
+            for k, v in inputs.items():
+                inputs[k] = v.to(self.device, non_blocking=True)
 
         if self.pooling_method == "cls":
             embedding = self.plm(**inputs)[0][:, 0]
@@ -41,12 +45,13 @@ class GenericPLMEncoder(torch.nn.Module):
         return embedding
 
 
-    def encode_text(self, text_path, save_dir, batch_size=200):
+    def encode_text(self, text_path, save_dir, text_num, batch_size=200):
         """ encode the text in text path into dense vectors by plm
         """
         print(f"encoding {text_path} and saving at {save_dir}...")
 
-        text_num = int(subprocess.check_output(["wc", "-l", text_path]).decode("utf-8").split()[0])
+        all_text_num = int(subprocess.check_output(["wc", "-l", text_path]).decode("utf-8").split()[0])
+
         os.makedirs(save_dir, exist_ok=True)
         text_embeddings = np.memmap(
             os.path.join(save_dir, "text_embeddings.mmp"),
@@ -57,14 +62,19 @@ class GenericPLMEncoder(torch.nn.Module):
 
         with open(text_path, encoding="utf-8") as f:
             batch_text = []
-            for i, line in enumerate(tqdm(f, total=text_num, ncols=100, desc="Encoding Text")):
+            j = 0
+            for i, line in enumerate(tqdm(f, total=all_text_num, ncols=100, desc="Encoding Text")):
                 case = json.loads(line.strip())
-                if i % batch_size == 0:
-                    if i > 0:
+                if "tf_content" not in case:
+                    continue
+
+                if j % batch_size == 0:
+                    if j > 0:
                         embedding = self._encode(batch_text).cpu().numpy()
-                        text_embeddings[i - batch_size: i] = embedding
+                        text_embeddings[j - batch_size: j] = embedding
                     batch_text = []
                 batch_text.append(case["tf_content"])
+                j += 1
 
             if len(batch_text):
                 text_embeddings[-len(batch_text):] = self._encode(batch_text).cpu().numpy()
@@ -75,10 +85,7 @@ class GenericPLMEncoder(torch.nn.Module):
     def encode_single_query(self, query, max_length=None):
         """ encode a single query
         """
-        if max_length:
-            self.max_length = max_length
-
-        embedding = self._encode([query.replace("\n", "")])
+        embedding = self._encode(query, max_length=max_length)
         if self.metric == "cos":
             embedding = F.normalize(embedding, dim=-1)
         return embedding.squeeze(0).tolist()
@@ -105,5 +112,9 @@ if __name__ == "__main__":
     text_path = f"../../../Data/{args.data}/{args.file}"
     name = ".".join(args.file.split(".")[:-1])
 
+    stat_path = f"../../../Data/{args.data}/{args.file}.stat"
+    stat = json.load(open(stat_path))
+    valid_tf_content_count = stat["valid_tf_content_count"]
+
     save_dir = os.path.join("data", "encode", args.model, args.data, name)
-    model.encode_text(text_path, save_dir, batch_size=args.batch_size)
+    model.encode_text(text_path, save_dir, batch_size=args.batch_size, text_num=valid_tf_content_count)

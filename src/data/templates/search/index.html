@@ -18,7 +18,7 @@
             <label for="search-query">查询：</label>
         </div>
         <button class="btn btn-primary rounded-0" type="submit" id="search-button">
-            search
+            搜索
         </button>
     </div>
 </div>
@@ -203,7 +203,7 @@
                             name = agg_name
 
                             let checkbox = `<div class="form-check">
-                                                <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets()">
+                                                <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets(this)">
                                                 <div class="d-flex justify-content-between">
                                                     <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
                                                     <span><small><em>${count}</em></small></span>
@@ -249,7 +249,9 @@
     }
 
 
-    function process_facets() {
+    function process_facets(elem) {
+        elem.blur()
+
         // capture all selected facets and return them in the elastic query format
         let all_aggs = $("#search-facets > div")
         // empty previous facets

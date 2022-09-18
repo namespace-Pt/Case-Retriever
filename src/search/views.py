@@ -27,6 +27,14 @@ def search(query, backbone, facets, from_, size):
     returning the processed hits, each element of which is a single document
     """
     query_dict = {}
+    if query == "":
+        return {
+            "hits": [],
+            "aggregations": [],
+            "total": 0,
+            "took": 0
+        }
+
     if backbone == "关键词查询":
         # if the query is wrapped in a quote, then find exact match of the entire sentence
         if query[0] in "\'\"“" and query[-1] in "\'\"”":
@@ -52,7 +60,7 @@ def search(query, backbone, facets, from_, size):
 
         query_dict["knn"] = {
             "field": "vector",
-            "query_vector": model.encode_single_query(query, max_length=256),
+            "query_vector": model.encode_single_query(query.replace("\n", ""), max_length=256),
             "k": 1000,
             # this is necessary
             "num_candidates": 1000

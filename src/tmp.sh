@@ -1,3 +1,3 @@
-python -m utils.encode --file p4.filtered.txt --batch_size 100
-python -m utils.encode --file p5.filtered.txt --batch_size 100
-python -m utils.encode --file p2-1.filtered.txt --batch_size 100
+python -m utils.filter --end 1000000
+python -m utils.filter --file p4.txt
+python -m utils.filter --file p5.txt
