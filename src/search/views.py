@@ -60,10 +60,10 @@ def search(query, backbone, facets, from_, size):
 
         query_dict["knn"] = {
             "field": "vector",
-            "query_vector": model.encode_single_query(query.replace("\n", ""), max_length=256),
+            "query_vector": model.encode_single_query(query.replace("\n", "")),
             "k": 1000,
             # this is necessary
-            "num_candidates": 1000
+            "num_candidates": 10000
         }
 
     resp = elastic.search(
@@ -139,6 +139,7 @@ def search(query, backbone, facets, from_, size):
     # merge _source and hightlight when the highlight field is missing
     for hit in hits:
         fields = hit["fields"]
+
         # add [0] because elastic returns list by default
         new_hit = {
             "case_name": fields["case_name"][0][:100] if "case_name" in fields else "EMPTY CASE_NAME!",
