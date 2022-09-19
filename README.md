@@ -16,15 +16,12 @@ python manager.py runserver
 ### Searching
 - [x] search in chinese
 - [x] search multiple fields by one query
+- [x] search exact match phrases by quoting the query
 - [x] knn search
-#### Highlighting
-- [x] highlight matching by bolding
-#### Facets
 - [x] term facets
+- [x] highlight matching by bolding
 ### Backend
 - django
 ### Frontend
 - bootstrap
 
-
-1. 裁定书很少包含案情
