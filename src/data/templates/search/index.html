@@ -25,7 +25,7 @@
 
 <div id="background" class="background">
     <!-- donot use django template here because ajax is designed to async returning data, while template is used to refresh the entire page -->
-    <div class="horizontal-align-content">
+    <div class="horizontal-align-content" id="search-results-and-facets">
         <div class="" style="width: 25%; margin-left: 20px; margin-right: 70px;" id="search-facets">
         </div>
         <div class="" style="width: 90%; margin-right: 20px" id="search-results">
@@ -41,7 +41,6 @@
 
 <script>
 
-    // declare hits in the global scope because we want to paginate over the hits
     // these are returned from the server side
     let hits = []
     let aggregations = {}
@@ -51,8 +50,6 @@
     let took = 0
 
     // these are assigned on the client side (script)
-    let query = ""
-    let backbone = ""
     let facets = []
     let current_page = 1
     let max_page = 5
@@ -99,22 +96,17 @@
     })
 
 
-    function search(callback=null, data=null) {
+    function search(callback=null) {
         // send search post loading parameters from global variables
         // if success, refresh search results and call extra callback functions
 
-        // default data
-        if (!data){
-            data = {
-                query: $("#search-query").val(),
-                backbone: $("#backbone-dropdown-button").text(),
-                size: max_doc_num_per_page,
-                from: (current_page - 1) * max_doc_num_per_page,
-                facets: facets
-            }
+        data = {
+            query: $("#search-query").val(),
+            backbone: $("#backbone-dropdown-button").text(),
+            size: max_doc_num_per_page,
+            from: (current_page - 1) * max_doc_num_per_page,
+            facets: facets
         }
-
-        console.log(data)
 
         $.ajax("{% url 'search-main' %}", {
             type: "POST",
