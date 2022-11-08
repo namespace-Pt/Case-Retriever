@@ -12,8 +12,8 @@ elastic = Elasticsearch(
     "http://localhost:9200",
     request_timeout=1000000
 )
-default_index = "wenshu"
-facet_size = 10
+default_index = "case"
+facet_size = 5
 
 plm_dir = "data/model/DPR"
 plm = AutoModel.from_pretrained(plm_dir)
@@ -51,6 +51,7 @@ def search(query, backbone, facets, from_, size):
             query_dict["query"] = {
                 "combined_fields": {
                     "query": query,
+                    # "operator": "AND",
                     "fields": ["case_name", "content"],
                 }
             }
@@ -73,7 +74,7 @@ def search(query, backbone, facets, from_, size):
         from_=from_ if from_ is not None else 0,
         # here we insert the query string, it's either bm25 search or vector search
         **query_dict,
-        fields=["case_name", "content", {"field": "publish_date", "format": "year_month_day"}, "court_name", "cause"],
+        fields=["case_name", "content", {"field": "publish_date", "format": "year_month_day"}, "court_name"],
         # set color
         highlight={
             "fields": {
@@ -85,18 +86,11 @@ def search(query, backbone, facets, from_, size):
                 "content": {
                     "pre_tags" : ["<strong>"],
                     "post_tags": ["</strong>"],
-                    "number_of_fragments": 1,
+                    "number_of_fragments": 3,
                 }
             }
         },
         aggs={
-            "agg-terms-court_name": {
-                # this terms means find unique terms to build buckets
-                "terms": {
-                    "field": "court_name",
-                    "size": facet_size
-                }
-            },
             "agg-terms-case_type": {
                 "terms": {
                     "field": "case_type",
@@ -109,18 +103,32 @@ def search(query, backbone, facets, from_, size):
                     "size": facet_size
                 }
             },
+            "agg-terms-court_name": {
+                # this terms means find unique terms to build buckets
+                "terms": {
+                    "field": "court_name",
+                    "size": facet_size
+                }
+            },
+            "agg-terms-legal_base": {
+                "terms": {
+                    "field": "legal_base",
+                    "size": facet_size
+                }
+            },
+            # "agg-terms-pub_prosecution_org":{
+            #     "terms": {
+            #         "field": "pub_prosecution_org",
+            #         "size": 5
+            #     }
+            # },
             "agg-terms-trial_round": {
                 "terms": {
                     "field": "trial_round",
                     "size": 5
                 }
             },
-            "agg-terms-pub_prosecution_org":{
-                "terms": {
-                    "field": "pub_prosecution_org",
-                    "size": 5
-                }
-            }
+
         },
         post_filter={
             "bool": {
@@ -144,8 +152,8 @@ def search(query, backbone, facets, from_, size):
         new_hit = {
             "case_name": fields["case_name"][0][:100] if "case_name" in fields else "EMPTY CASE_NAME!",
             "content": fields["content"][0][:500] if "content" in fields else "EMPTY CONTENT!",
-            "court_name": fields["court_name"],
-            "publish_date": fields["publish_date"],
+            "court_name": fields["court_name"] if "court_name" in fields else "",
+            "publish_date": fields["publish_date"] if "publish_date" in fields else "",
         }
         # FIXME: _id is not by the field
         new_hit["_id"] = hit["_id"]
