@@ -4,49 +4,61 @@
 
 
 <div class="container">
-    <div class="d-flex bd-highlight justify-content-center mt-3 mb-5", style="position: relative;">
+    <div class="search-bar">
         <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">关键词查询</button>
             <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
                 <li><h6 class="dropdown-header">查询方式</h6></li>
                 <li><a class="dropdown-item" href="#">关键词查询</a></li>
                 <li><a class="dropdown-item" href="#">类案查询</a></li>
             </div>
+        <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="field-dropdown-button">全文</button>
+            <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
+                <li><h6 class="dropdown-header">查询域</h6></li>
+                <li><a class="dropdown-item" href="#">全文</a></li>
+                <li><a class="dropdown-item" href="#">仅案情</a></li>
+            </div>
         <div class="form-floating flex-grow-1">
             <!-- the placeholder is necessary here for the floating label to work; explicitly set height -->
-            <textarea class="form-control border-primary rounded-0" style="height: 100%" id="search-query" placeholder="placeholder"></textarea>
-            <label for="search-query">查询：</label>
+            <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder"></textarea>
+            <label for="search-query"><small>查询：</small></label>
         </div>
         <button class="btn btn-primary rounded-0" type="submit" id="search-button">
         搜索
         </button>
-        <div style="position: absolute; left: 100%;">
-            <div id="spinner" class="lds-spinner p-0 m-0" style="scale: 0.4; display: none;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+        <!-- align-self to align vertically; left to adjust position -->
+        <div style="position: absolute; align-self: center; left: 100%;">
+            <div id="spinner" class="lds-spinner" style="scale: 0.4; display: none;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
         </div>
     </div>
-    <!-- use flex to align items -->
-</div>
 
-<div id="background" class="background">
-    <!-- donot use django template here because ajax is designed to async returning data, while template is used to refresh the entire page -->
+    <div id="keywords-bar">
+        <!-- <div style="grid-area:header; justify-self:center; align-self:center"></div> -->
+        <div class="keyword">民间借贷纠纷</div>
+        <div class="keyword">受贿</div>
+        <div class="keyword">帮助信息网络犯罪活动</div>
+    </div>
 
     <div class="horizontal-align-content" id="search-results-and-facets">
-        <div class="" style="width: 25%; margin-left: 20px; margin-right: 70px;" id="search-facets">
+        <div class="facet-sidebar" id="search-facets">
         </div>
-        <div class="" style="width: 90%; margin-right: 20px" id="search-results">
+        <div style="width: 70%;" id="search-results">
         </div>
     </div>
 
-    <nav>
-        <ul id="page-bar" class="pagination justify-content-center">
-        </ul>
-    </nav>
+    <div style="margin-top: 3vh;">
+        <nav>
+            <ul id="page-bar" class="pagination justify-content-center">
+            </ul>
+        </nav>
+    </div>
 
-    <div style="position: relative; bottom: 0; text-align: center; font-size: smaller;">
-        <div>
-            Open Source at  <a class="text-decoration-none" href="http://github.com/namespace-Pt/Case-Retriever" target="_blank"><i class="fab fa-github" aria-hidden="true"></i>GitHub</a>
-        </div>
+    <div class="copyright">
+        <hr>
+        Open Source at  <a class="text-decoration-none" href="http://github.com/namespace-Pt/Case-Retriever" target="_blank"><i class="fab fa-github" aria-hidden="true"></i>GitHub</a>
     </div>
 </div>
+
+
 
 
 <script>
@@ -67,23 +79,27 @@
     // these are pre-defined parameters
     let max_doc_num_per_page = 20
     // map the english field name to chinese when displaying on the facet bar
-    let agg_field_dict = {
-        "court_name": "法院名称",
-        // "pub_prosecution_org": "审理机关名称",
-        "case_type": "案件类型",
-        "cause": "缘由",
-        "legal_base": "法律依据",
-        "trial_round": "审理轮数",
-    }
+    let agg_field_dict = JSON.parse("{{ field_name_chinese|escapejs }}")
 
+    // record if this is the first query, used to make animations
+    let first_query = true
 
     $(".dropdown-item").click(function(){
-        // set the text of backbone-dropdown-button by the clicked backbone
-        $("#backbone-dropdown-button").text($(this).text())
+        // set text of the button according to the clicked option
+        $(this).parent().parent().prev().text($(this).text())
+        if ($(this).text() == "类案查询") {
+            $("#field-dropdown-button").text("仅案情")
+            // hide 全文 field
+            $("#field-dropdown-button ~ div > li:eq(1)").hide()
+        }
+        else if ($(this).text() == "关键词查询") {
+            $("#field-dropdown-button ~ div > li:eq(1)").show()
+            $("#field-dropdown-button").text("全文")
+        }
     })
 
 
-    $("textarea").keydown(function(event){
+    $("#search-query").keydown(function(event){
         // press enter key to search
         // disable creating new line when pressing enter key
         // to create new line, use shift+enter
@@ -96,7 +112,13 @@
     });
 
 
-    $("#search-button").click(function(){
+    $(".keyword").click(function (){
+        $("#search-query").val($(this).text())
+        $("#search-button").click()
+    })
+
+
+    $("#search-button").click(function (){
         // unfocus the textarea and the button
         $("#search-query").blur()
         $("#search-button").blur()
@@ -106,50 +128,65 @@
         $("#search-facets").html("")
         $("#page-bar").html("")
 
+        // the first query makes the search bar float to the top and hides the copyright and keywords bar
+        if (first_query){
+            $(".search-bar").animate({"margin-top": "5vh"})
+            $(".copyright").hide()
+            $("#keywords-bar").hide()
+            first_query = false
+        }
+
         search(
             () => {refresh_facets(); display_pages()}
         )
     })
 
 
-    function search(callback=null) {
+    function search(callback=null, data=null) {
         // send search post loading parameters from global variables
         // if success, refresh search results and call extra callback functions
 
         // show the progress bar
         $("#spinner").show()
 
-        data = {
-            query: $("#search-query").val(),
-            backbone: $("#backbone-dropdown-button").text(),
-            size: max_doc_num_per_page,
-            from: (current_page - 1) * max_doc_num_per_page,
-            facets: facets
-        }
-
-        $.ajax("{% url 'search-main' %}", {
-            type: "POST",
-            data: JSON.stringify(data),
-            success: function(response){
-                $("#spinner").hide()
-
-                // update results and facets
-                hits = response["hits"]
-                aggregations = response["aggregations"]
-                // use the total number of possible hits to compute maximum page number
-                max_page = Math.ceil(response["total"] / max_doc_num_per_page)
-                total = response["total"]
-                took = response["took"]
-
-                console.log(response)
-                refresh_search_results()
-                // refresh_facets()
-
-                if (callback) {
-                    callback()
-                }
+        if (!data) {
+            data = {
+                query: $("#search-query").val(),
+                backbone: $("#backbone-dropdown-button").text(),
+                field: $("#field-dropdown-button").text(),
+                size: max_doc_num_per_page,
+                from: (current_page - 1) * max_doc_num_per_page,
+                facets: facets
             }
-        })
+        }
+        console.log(data)
+
+        // ignore empty queries
+        if (data["query"].length){
+            $.ajax("{% url 'search-main' %}", {
+                type: "POST",
+                data: JSON.stringify(data),
+                success: function(response){
+                    $("#spinner").hide()
+
+                    // update results and facets
+                    hits = response["hits"]
+                    aggregations = response["aggregations"]
+                    // use the total number of possible hits to compute maximum page number
+                    max_page = Math.ceil(response["total"] / max_doc_num_per_page)
+                    total = response["total"]
+                    took = response["took"]
+
+                    console.log(response)
+                    refresh_search_results()
+                    // refresh_facets()
+
+                    if (callback) {
+                        callback()
+                    }
+                }
+            })
+        }
     }
 
 
@@ -164,24 +201,37 @@
         if (hits.length){
             $("#background").addClass("p-4")
 
-            let efficiency_bar = `<span><em style="font-size:smaller; color: grey;">about ${total} results in ${took}s</em></span>`
-            $("#search-results").append(efficiency_bar)
+            // let efficiency_bar = `<span><em style="font-size:smaller; color: grey;">about ${total} results in ${took}s</em></span>`
+            // $("#search-results").append(efficiency_bar)
 
+            let index = 0
             // display hits in the search-results container
             for (hit of hits){
                 // here we must use the url string instead of the url name because it contains parameters
                 let frame = `<div class="search-result border border-light-5 rounded-4 p-2 mb-2">
-                                <button class="download-button">
-                                    <a href="download/${hit._id}/" download><i class="fa fa-download"></i></a>
-                                </button>
-                                <a class="text-decoration-none" href="detail/${hit._id}/" target="_blank">${hit.case_name}</a>
+                                <div style="justify-content:space-between; display:flex; padding-right: 1%;">
+                                    <a class="text-decoration-none" href="detail/${hit._id}/" target="_blank">${hit.case_name}</a>
+                                    <div>
+                                        <span class="icon-button">
+                                            <a href="download/${hit._id}/" style="color: none;" title="下载文书" download><i class="fa-solid fa-download"></i></a>
+                                        </span>
+                                        <span class="icon-button" title="搜索类案" onclick="process_search_similar_case(${index})">
+                                            <i class="fa-solid fa-magnifying-glass"></i>
+                                        </span>
+                                        <span class="icon-button" title="解释" onclick="process_search_explain(${index})">
+                                            <i class="fa-solid fa-compass"></i>
+                                        </span>
+                                    </div>
+                                </div>
                                 <p class="mb-1">${hit.content}</p>
                                 <div class="d-flex justify-content-between">
                                     <span><small><em>${hit.court_name}</em></small></span>
                                     <span class="float-end"><small><em>${hit.publish_date}</em></small></span>
                                 </div>
-                            </div>`//.replace('/n','')
+                            </div>`
                 $("#search-results").append(frame)
+
+                index += 1
             }
         }
     }
@@ -200,7 +250,6 @@
                     // the field of the aggregation
                     buckets = agg["buckets"]
                     if (buckets.length > 0){
-                        console.log(agg_name)
                         // create the big div containing all the buckets of the terms aggreagtion
                         // display by checkboxes
                         let div = `<div id="facet-${agg_name}" class="mb-4"><strong>${agg_field_dict[agg_field]}:</strong></div>`
@@ -210,18 +259,21 @@
                             bucket = buckets[i]
 
                             key = bucket["key"]
-                            count = bucket["doc_count"]
-                            name = agg_name
+                            // key maybe empty string
+                            if (key.length){
+                                count = bucket["doc_count"]
+                                name = agg_name
 
-                            let checkbox = `<div class="form-check">
-                                                <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets(this)">
-                                                <div class="d-flex justify-content-between">
-                                                    <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
-                                                    <span><small><em>${count}</em></small></span>
-                                                </div>
-                                            </div>`
+                                let checkbox = `<div class="form-check">
+                                                    <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets(this)">
+                                                    <div class="d-flex justify-content-between">
+                                                        <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
+                                                        <span><small><em>${count}</em></small></span>
+                                                    </div>
+                                                </div>`
 
-                            $(`#facet-${agg_name}`).append(checkbox)
+                                $(`#facet-${agg_name}`).append(checkbox)
+                            }
                         }
                     }
                 }
@@ -365,56 +417,48 @@
     }
 
 
-    // $(document).ready(function(){
-    //     hits = [
-    //         {
-    //             "case_name": "雷莹、陈玲丽民间借贷纠纷民事一审民事判决书",
-    //             "content": "安徽省青阳县人民法院\n民 事 判 决 书\n（2021）皖1723民初39号\n原告：雷莹，女，1988年3月24日出生，汉族，户籍地安徽省池州市青阳县，经常居住地安徽省池州市青阳县。\n被告：陈玲丽，女，1977年8月21日出生，汉族，住安徽省池州市青阳县。\n原告雷莹与被告陈玲丽民间借贷纠纷一案，本院于2021年1月7日立案后，依法适用普通程序，公开开庭进行了审理。原告雷莹到庭参加诉讼，被告陈玲丽经公告送达开庭传票，未到庭参加诉讼。本案现已审理终结。\n雷莹向本院提出诉讼请求：1、请求陈玲丽向雷莹偿还借款本金5万元及利息（利息自2020年12月31日起按全国银行间同业拆借中心公布的一年期贷款利率即年利率3.85%计算至借款实际付清时止）；2、本案诉讼费由陈玲丽承担。\n事实与理由：陈玲丽系做酒水生意的，雷莹系邮储银行的工作人员。2018年9月初，陈玲丽向雷莹声称办酒需要6万元周转一下资金。因陈玲丽与雷莹有亲戚关系，雷莹和丈夫也是通过陈玲丽介绍认识的，陈玲丽谎称只是临时周转、几天后即归还，导致雷莹轻信其言，允诺帮忙凑一下。2018年9月6日，雷莹赎回了在邮储银行购买的理财产品中的5万元，因该款理",
-    //             "court_name": [
-    //                 "青阳县人民法院"
-    //             ],
-    //             "publish_date": [
-    //                 "2021-10-02"
-    //             ],
-    //             "_id": "aWLy04MB1-2U-nhAv5bN"
-    //         },
-    //         {
-    //             "case_name": "叶灿良、陈佩璇民间借贷纠纷二审民事判决书",
-    //             "content": "广东省广州市中级人民法院\n民 事 判 决 书\n（2021）粤01民终3006号\n上诉人（原审被告）：叶灿良，男，1996年10月29日出生，汉族，住广东省东莞市。\n委托诉讼代理人：黄金乐，广东秦仪律师事务所律师。\n被上诉人（原审原告）：陈佩璇，女，1992年11月18日出生，汉族，住广东省海丰县。\n委托诉讼代理人：陈佩琳，女，1991年12月18日出生，汉族，住广东省海丰县，系被上诉人的姐姐。\n上诉人叶灿良因与被上诉人陈佩璇民间借贷纠纷一案，不服广州市海珠区人民法院（2020）粤0105民初27542号民事判决，向本院提起上诉。本院于2021年1月26日立案受理后，根据《全国人民代表大会常务委员会关于授权最高人民法院在部分地区开展民事诉讼程序繁简分流改革试点工作的决定》，依法适用第二审程序，由审判员独任审理，于2021年3月1日公开开庭审理了本案。上诉人叶灿良的委托诉讼代理人黄金乐、被上诉人陈佩璇及其委托诉讼代理人陈佩琳到庭参加诉讼。本案现已审理终结。\n上诉人叶灿良上诉请求：撤销一审判决，改判叶灿良向陈佩璇返还借款36500元，由陈佩璇承担本案全部诉讼费用。事实和理由：一审法院根据所谓",
-    //             "court_name": [
-    //                 "广东省广州市中级人民法院"
-    //             ],
-    //             "publish_date": [
-    //                 "2021-03-30"
-    //             ],
-    //             "_id": "aFWN04MB1-2U-nhAaPMI"
-    //         },
-    //         {
-    //             "case_name": "原告陈骧与被告陈静思民间借贷纠纷一审民事判决书",
-    //             "content": "南京市建邺区人民法院\n民 事 判 决 书\n（2016）苏0105民初8505号\n原告：陈骧，男，1972年11月24日生，汉族，住南京市建邺区。\n被告：陈静思，男，1963年9月21日生，汉族，户籍地江苏省泗洪县。\n原告陈骧与被告陈静思民间借贷纠纷一案，本院于2016年11月22日立案后，发现有不宜适用简易程序的情形，于2017年2月21日裁定转为普通程序，并于2017年5月31日依法公开开庭审理了本案。原告陈骧到庭参加诉讼，被告陈静思经公告送达开庭传票，未到庭参加诉讼。本案现已审理终结。\n原告陈骧向本院提出诉讼请求：1.判令被告陈静思归还借款25万元；2.判令被告陈静思承担本案诉讼费用。事实和理由：原告陈骧与被告陈静思系同学关系。因陈静思做生意需要，向陈骧借款25万元。陈骧以银行转账给付了借款，陈静思出具了一份《情况说明》。虽经多次催要，但是陈静思拒不履行还款义务。为维护自身的合法权益，故提起本次诉讼。\n被告陈静思未作答辩。\n当事人围绕诉讼请求依法提交了证据，本院组织当事人进行了证据交换和质证。对当事人无异议的证据，本院予以确认并在卷佐证。\n根据当事人陈述和经审查确认的证据，本院认定",
-    //             "court_name": [
-    //                 "南京市建邺区人民法院"
-    //             ],
-    //             "publish_date": [
-    //                 "2017-11-29"
-    //             ],
-    //             "_id": "l37I1IMB1-2U-nhAX38X"
-    //         },
-    //         {
-    //             "case_name": "552王茂泉与高剑莉民间借贷纠纷一审民事裁定书",
-    //             "content": "江苏省靖江市人民法院\n民 事 裁 定 书\n（2020）苏1282民初552号\n原告：王茂泉，男\n被告：高剑莉，女\n原告王茂泉与被告高剑莉为民间借贷纠纷一案，本院于2020年1月20日立案后，依法进行审理。\n原告向本院提出诉讼请求：1.判令被告立即归还原告借款1153130元及利息（按同期银行贷款利率自2019年4月5日计算至实际还清之日止）；2、本案诉讼费由被告承担。事实与理由：2019年3月，原告经陈楠介绍认识被告。同年3月底，高剑莉以可帮原告女儿报名参加省教委和省体委联合举办的体育项目比赛为由，提出需拿款办事和短期周转，向原告借款162万元，原告通过银行转帐将上述款项转给高剑莉。因报名未成，原告要求退款，2019年4月3日、5日，高剑莉分别出具102万元、60万元借条各一张。2019年6月26日，高剑莉出具还款计划承诺书，承诺于2019年7月1日前还款20万元，同年7月5日还款40万元，余款在2019年7月10日前全部结清。后高剑莉陆续还款及以物抵款计466870元。\n被告辩称，2019年3月底，我与原告经陈楠介绍相识。原告女儿在外国语读初三，分数可能只能上到一中，原告问我他女儿如",
-    //             "court_name": [
-    //                 "江苏省靖江市人民法院"
-    //             ],
-    //             "publish_date": [
-    //                 "2020-10-23"
-    //             ],
-    //             "_id": "Kz3N0oMB1-2U-nhA1Bgt"
-    //         }
-    //     ]
+    function process_search_similar_case(index) {
+        $("#search-results").html("")
+        $("#search-facets").html("")
+        $("#page-bar").html("")
 
-    //     refresh_search_results()
-    // })
+        hit = hits[index]
+        query = hit["pseudo_basics_text"]
+        $("#search-query").val(query)
+        $("#field-dropdown-button").text("仅案情")
+
+        search(
+            () => {refresh_facets(); display_pages()},
+            // pass in data explicitly to override facets and backbone
+            {
+                query: query,
+                backbone: "关键词查询",
+                field: "仅案情",
+                size: max_doc_num_per_page,
+                from: (current_page - 1) * max_doc_num_per_page,
+                facets: []
+            }
+        )
+    }
+
+
+    function process_search_explain(index) {
+        hit = hits[index]
+        data = {
+            query: $("#search-query").val(),
+            candidate: hit["pseudo_basics_text"]
+        }
+
+        $.ajax("{% url 'search-explain' %}", {
+            type: "POST",
+            data: JSON.stringify(data),
+            success: function(response){
+                var w = window.open();
+                w.document.write(response);
+                w.document.close();
+            }
+        })
+    }
 
 </script>
 {% endblock %}

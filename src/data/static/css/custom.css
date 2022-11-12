@@ -1,14 +1,7 @@
-.background{
-    /* background-color: #F0FFFF; */
-    /* position: fixed; */
-    padding:0;
-    margin:0;
-}
-
-.download-button {
+.icon-button {
     background-color: white; /* Blue background */
     border: none; /* Remove borders */
-    color: none; /* White text */
+    color: #0d6efd; /* White text */
     padding: 0%;
     margin-right: 5px;
     font-size: 16px; /* Set a font size */
@@ -22,6 +15,111 @@
     justify-content: center;
 }
 
+.search-bar {
+  display: flex;
+  /* background-color: #0d6efd; */
+  justify-content: center;
+
+  position: relative;
+  /* offset 30% of the screen */
+  /* top: 30vh; */
+  margin-top: 30vh;
+  margin-bottom: 5vh;
+}
+
+#keywords-bar {
+  width: 30%;
+  height: 30%;
+
+  display: grid;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 10vh;
+
+  grid-template-columns: 45% 45%;
+  grid-template-rows: 1fr 1fr 1fr;
+  column-gap: 10%;
+  row-gap: 10%;
+
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+
+  grid-template-areas:
+    "header header"
+    ". . "
+    ". .";
+}
+
+.keyword {
+  background-color: white;
+  border-style: groove;
+  border-color: #0d6efd;;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.keyword:hover {
+  color: #0d6efd;
+}
+
+.copyright {
+  position: relative;
+  left: 50%;
+  bottom: 0px;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+
+  width: 100%;
+  font-size: smaller;
+  text-align: center;
+  margin-top: 30vh;
+}
+
+.facet-sidebar {
+    width: 25%;
+    margin-right: 5%;
+    /* top: 0;
+    height: 50vh;
+    position: sticky;
+    overflow-y: scroll; */
+}
+.facet-sidebar::-webkit-scrollbar {
+  width: 0;  /* Remove scrollbar space */
+  background: transparent;  /* Optional: just make scrollbar invisible */
+}
+
+.detail-sidebar{
+  top: 5vh;
+  width: 20%;
+  height: 100vh;
+  position: sticky;
+  overflow-y: scroll;
+}
+.detail-sidebar::-webkit-scrollbar {
+  width: 0;  /* Remove scrollbar space */
+  background: transparent;  /* Optional: just make scrollbar invisible */
+}
+
+.explain-text-block{
+  position: relative;
+  height: 100vh;
+  width: 45%;
+  overflow-y: scroll;
+}
+.explain-text-block::-webkit-scrollbar {
+  width: 0;  /* Remove scrollbar space */
+  background: transparent;  /* Optional: just make scrollbar invisible */
+}
+
+.highlight-text {
+  background-color: rgba(243, 246, 106, 0.86);
+  width: 95%;
+}
+
+.query-highlight-text {
+  cursor: pointer; /* Mouse pointer on hover */
+  color: #0d6efd;
+}
 
 .lds-spinner,
 .lds-spinner div,

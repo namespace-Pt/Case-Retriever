@@ -20,8 +20,11 @@ python manager.py runserver
 - [x] knn search
 - [x] term facets
 - [x] highlight matching by bolding
+- [x] processing icon
+- [x] searching similar cases button
+- [x] explain
+
 ### Backend
 - django
 ### Frontend
 - bootstrap
-

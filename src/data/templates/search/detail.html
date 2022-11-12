@@ -1,12 +1,25 @@
 {% extends 'base.html' %}
 
 {% block body %}
-<div class="container p-5">
-    <h5 class="mt-4 text-primary">
-        {{case_name}}
-    </h5>
-    <p class="mt-4" style="white-space: pre-line">
-        {{content}}
-    </p>
+<div class="container">
+    <div style="display: flex;">
+        <div class="detail-sidebar" style="font-size: large;">
+            <ul style="list-style: none;">
+                {% for key, value in source.items %}
+                    <li><a href="#{{ key }}" class="text-decoration-none">{{ value.1 }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div style="margin-left: 5%; width: 80%;">
+            {% for key, value in source.items %}
+                <section id={{ key }}>
+                    <hr>
+                    <h4>{{ value.1 }}</h4>
+                    {{value.0}}
+                </section>
+            {% endfor %}
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -110,7 +110,7 @@ if __name__ == "__main__":
     model = GenericPLMEncoder(plm=plm, tokenizer=tokenizer, device=args.device, pooling_method=args.pooling_method, metric=args.metric)
 
     text_path = f"../../../Data/{args.data}/{args.file}"
-    name = ".".join(args.file.split(".")[:-1])
+    name = args.file.split(".")[0]
 
     stat_path = f"../../../Data/{args.data}/{args.file}.stat"
     stat = json.load(open(stat_path))

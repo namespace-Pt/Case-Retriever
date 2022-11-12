@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<div class="container">
+    <div style="display: flex; justify-content: space-between;">
+        <div class="explain-text-block" id="query-block">
+        </div>
+        <div class="explain-text-block" id="candidate-block">
+        </div>
+    </div>
+</div>
+
+<script>
+    // parse the contexts
+    let query_sents = JSON.parse("{{ query_sents|escapejs }}")
+    let candidate_sents = JSON.parse("{{ candidate_sents|escapejs }}")
+    let query_matched_sent_indices = JSON.parse("{{ query_matched_sent_indices|escapejs }}")
+    let candidate_matched_sent_indices = JSON.parse("{{ candidate_matched_sent_indices|escapejs }}")
+    let matched_sent_indices = []
+
+    // place the function here instead of $(document).ready, otherwise the span cannot be selected by jquery
+    for (sent of query_sents){
+        $("#query-block").append(`<span>${sent}</span> `)
+    }
+
+    for (sent of candidate_sents){
+        $("#candidate-block").append(`<span>${sent}</span>`)
+    }
+
+    for (query_sent_index in query_matched_sent_indices){
+        $(`#query-block > span:eq(${query_sent_index})`).addClass("query-highlight-text")
+    }
+
+    // $("#query-block > span").hover(function () {
+    //     let key = $("#query-block > span").index(this)
+    //     if (key in query_matched_sent_indices){
+    //         matched_sent_indices = query_matched_sent_indices[key]
+    //         for (index of matched_sent_indices){
+    //             $(`#candidate-block > span:eq(${index})`).addClass("highlight-text")
+    //         }
+    //     }
+    //     else{
+    //         matched_sent_indices = []
+    //     }
+    // },
+    // function () {
+    //     if (matched_sent_indices.length){
+    //         for (index of matched_sent_indices){
+    //             $(`#candidate-block > span:eq(${index})`).removeClass("highlight-text")
+    //         }
+    //         matched_sent_indices = []
+    //     }
+    // });
+
+    $("#query-block > span").click(function () {
+        let key = $("#query-block > span").index(this)
+
+        $("#query-block > span.highlight-text").removeClass("highlight-text")
+        $("#candidate-block > span.highlight-text").removeClass("highlight-text")
+
+        if (key in query_matched_sent_indices){
+            matched_sent_indices = query_matched_sent_indices[key]
+            $(this).addClass("highlight-text")
+            for (index of matched_sent_indices){
+                $(`#candidate-block > span:eq(${index})`).addClass("highlight-text")
+            }
+        }
+    });
+
+
+</script>
+
+{% endblock %}

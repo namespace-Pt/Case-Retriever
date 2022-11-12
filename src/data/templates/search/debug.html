@@ -1,16 +1,22 @@
+{% extends "base.html" %}
 {% load static %}
+{% block head %}
+<style>
+    #footer {
+        position: relative;
+        left: 50%;
+        bottom: 0px;
+        -webkit-transform: translateX(-50%);
+        transform: translateX(-50%)
+    }
+</style>
+{% endblock %}
 
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="{% static 'css/custom.css' %}">
-</head>
-<body>
-
-<h2>How To Create A Loader</h2>
-<div style="background-color: blue;">
-<div class="lds-spinner" style="scale: 0.4;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+{% block body %}
+<div class="container">
+    <div id="footer">
+        Some content you don't want affected by the "bottom floating" div
+    </div>
 </div>
-</body>
-</html>
+
+{% endblock %}
