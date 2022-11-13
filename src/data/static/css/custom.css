@@ -22,8 +22,8 @@
 
   position: relative;
   /* offset 30% of the screen */
-  /* top: 30vh; */
-  margin-top: 30vh;
+  /* top: 10vh; */
+  margin-top: 5vh;
   margin-bottom: 5vh;
 }
 
@@ -72,7 +72,7 @@
   width: 100%;
   font-size: smaller;
   text-align: center;
-  margin-top: 30vh;
+  margin-top: 15vh;
 }
 
 .facet-sidebar {
@@ -100,25 +100,12 @@
   background: transparent;  /* Optional: just make scrollbar invisible */
 }
 
-.explain-text-block{
-  position: relative;
-  height: 100vh;
-  width: 45%;
+.no-scroll-bar{
   overflow-y: scroll;
 }
-.explain-text-block::-webkit-scrollbar {
+.no-scroll-bar::-webkit-scrollbar {
   width: 0;  /* Remove scrollbar space */
   background: transparent;  /* Optional: just make scrollbar invisible */
-}
-
-.highlight-text {
-  background-color: rgba(243, 246, 106, 0.86);
-  width: 95%;
-}
-
-.query-highlight-text {
-  cursor: pointer; /* Mouse pointer on hover */
-  color: #0d6efd;
 }
 
 .lds-spinner,

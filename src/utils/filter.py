@@ -108,10 +108,10 @@ if __name__ == "__main__":
                     clean_title = ""
 
                 if args.debug:
-                    if fields["content"] and "裁定" not in clean_title and "决定" not in clean_title:
-                        h.write(fields["content"])
+                    if fields["content"] and "裁定" not in clean_title and "决定" not in clean_title and "通知" not in clean_title:
+                        h.write(fields["content"].replace("\n", "") + "\n")
 
-                    if skipped == 10000:
+                    if skipped == 100:
                         break
                     continue
 

@@ -1,11 +1,29 @@
 {% extends 'base.html' %}
 
 {% block body %}
-<div class="container">
-    <div style="display: flex; justify-content: space-between;">
-        <div class="explain-text-block" id="query-block">
+<div class="container text-center">
+    <div class="row align-items-start">
+        <div class="col">
+            <div class="d-flex flex-column" style="height: 100vh;">
+                <div style="min-height: 12vh;">
+                    <h4>查询</h4>
+                </div>
+                <hr>
+                <div class="flex-grow-1 no-scroll-bar" id="query-block">
+                </div>
+            </div>
         </div>
-        <div class="explain-text-block" id="candidate-block">
+
+        <div class="col">
+            <div class="d-flex flex-column" style="height: 100vh;">
+                <div style="min-height: 12vh;">
+                    <h5>{{ candidate_source.case_name }}</h5>
+                    <h6><em>{{ candidate_source.case_id }}</em></h6>
+                </div>
+                <hr>
+                <div class="flex-grow-1 no-scroll-bar" id="candidate-block">
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -16,7 +34,10 @@
     let candidate_sents = JSON.parse("{{ candidate_sents|escapejs }}")
     let query_matched_sent_indices = JSON.parse("{{ query_matched_sent_indices|escapejs }}")
     let candidate_matched_sent_indices = JSON.parse("{{ candidate_matched_sent_indices|escapejs }}")
-    let matched_sent_indices = []
+    let previous_query_sent_index = null
+
+    // palette for the matched text
+    let palettes =[["#FFFFCC", "#FFFF00"], ["#CCFFFF", "#CCCCFF"], ["#FFCCCC", "#CCCCCC"], ["#FFCC99", "#FF9900"], ["#CCFFCC", "#CCCC33"]]
 
     // place the function here instead of $(document).ready, otherwise the span cannot be selected by jquery
     for (sent of query_sents){
@@ -27,46 +48,48 @@
         $("#candidate-block").append(`<span>${sent}</span>`)
     }
 
-    for (query_sent_index in query_matched_sent_indices){
-        $(`#query-block > span:eq(${query_sent_index})`).addClass("query-highlight-text")
+    let i = 0
+    // initialize all matching
+    for (query_sent_index in query_matched_sent_indices) {
+        query_span = $(`#query-block > span:eq(${query_sent_index})`)
+        query_span.css({"background-color": palettes[i][0], "cursor": "pointer"})
+        query_span.attr("data-index", i);
+        for (index of query_matched_sent_indices[query_sent_index]){
+            candidate_span = $(`#candidate-block > span:eq(${index})`)
+            candidate_span.css({"background-color": palettes[i][0], "cursor": "pointer"})
+            candidate_span.attr("data-index", i);
+        }
+        i += 1
     }
 
-    // $("#query-block > span").hover(function () {
-    //     let key = $("#query-block > span").index(this)
-    //     if (key in query_matched_sent_indices){
-    //         matched_sent_indices = query_matched_sent_indices[key]
-    //         for (index of matched_sent_indices){
-    //             $(`#candidate-block > span:eq(${index})`).addClass("highlight-text")
-    //         }
-    //     }
-    //     else{
-    //         matched_sent_indices = []
-    //     }
-    // },
-    // function () {
-    //     if (matched_sent_indices.length){
-    //         for (index of matched_sent_indices){
-    //             $(`#candidate-block > span:eq(${index})`).removeClass("highlight-text")
-    //         }
-    //         matched_sent_indices = []
-    //     }
-    // });
 
     $("#query-block > span").click(function () {
-        let key = $("#query-block > span").index(this)
+        // de-highlight last clicked query
+        if (previous_query_sent_index) {
+            update_highlight(previous_query_sent_index)
+            previous_query_sent_index = null
+        }
 
-        $("#query-block > span.highlight-text").removeClass("highlight-text")
-        $("#candidate-block > span.highlight-text").removeClass("highlight-text")
-
-        if (key in query_matched_sent_indices){
-            matched_sent_indices = query_matched_sent_indices[key]
-            $(this).addClass("highlight-text")
-            for (index of matched_sent_indices){
-                $(`#candidate-block > span:eq(${index})`).addClass("highlight-text")
-            }
+        let query_sent_index = $("#query-block > span").index(this)
+        if (query_sent_index in query_matched_sent_indices){
+            update_highlight(query_sent_index, 1)
         }
     });
 
+
+    function update_highlight(query_sent_index, highlight_level=0) {
+        palette_index = $(`#query-block > span:eq(${query_sent_index})`).data().index
+        console.log(query_sent_index, palette_index)
+
+        $(`#query-block > span:eq(${query_sent_index})`).css("background-color", palettes[palette_index][highlight_level])
+        for (index of query_matched_sent_indices[query_sent_index]){
+            $(`#candidate-block > span:eq(${index})`).css("background-color", palettes[palette_index][highlight_level])
+        }
+
+        if (highlight_level > 0) {
+            previous_query_sent_index = query_sent_index
+        }
+    }
 
 </script>
 

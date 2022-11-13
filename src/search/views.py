@@ -16,7 +16,7 @@ elastic = Elasticsearch(
     request_timeout=1000000
 )
 default_index = "case"
-facet_size = 5
+facet_size = 10
 
 plm_dir = "data/model/DPR"
 plm = AutoModel.from_pretrained(plm_dir)
@@ -72,7 +72,7 @@ def search(query, backbone, search_field, facets, from_, size):
         }
 
     # add fields that can be inspected in resp["hits"]["fields"]
-    query_dict["fields"] = ["case_name", "content", "basics_text", {"field": "publish_date", "format": "year_month_day"}, "court_name"]
+    query_dict["fields"] = ["case_name", "content", "basics_text", "case_id", "court_name", {"field": "publish_date", "format": "year_month_day"}]
 
     # add aggregations
     query_dict["aggs"] = {
@@ -186,6 +186,7 @@ def search(query, backbone, search_field, facets, from_, size):
             "content": content,
             "court_name": fields["court_name"][0] if "court_name" in fields else "",
             "publish_date": fields["publish_date"][0] if "publish_date" in fields else "",
+            "case_id": fields["case_id"][0] if fields.get("case_id") else "",
         }
 
         new_hit["_id"] = hit["_id"]
@@ -256,8 +257,8 @@ def detail(request, id):
     return render(request, "search/detail.html", {"source": new_source})
 
 
-def download(request, id):
-    hit = elastic.get(index=default_index, id=id)["_source"]
+def download(request, candidate_id):
+    hit = elastic.get(index=default_index, id=candidate_id)["_source"]
     # essential to quote the chinese so that the file name can be properly parsed
     filename = quote(f"{hit['case_id']}.txt")
     content = f"{hit['case_name']}\n{hit['content']}"
@@ -273,8 +274,11 @@ def explain(request):
 
         query = data["query"]
         candidate = data["candidate"]
+        candidate_id = data["candidate_id"]
+        candidate_source = elastic.get(index=default_index, id=candidate_id)["_source"]
 
         query_sents, candidate_sents, matched_pairs = get_explanation_features(query, candidate)
+
         query_matched_sent_indices = defaultdict(list)
         candidate_matched_sent_indices = defaultdict(list)
         for pair in matched_pairs:
@@ -287,6 +291,7 @@ def explain(request):
             request,
             "search/explain.html",
             {
+                "candidate_source": candidate_source,
                 "query_sents": json.dumps(query_sents[0], ensure_ascii=False),
                 "candidate_sents": json.dumps(candidate_sents[0], ensure_ascii=False),
                 "query_matched_sent_indices": json.dumps(query_matched_sent_indices, ensure_ascii=False),

@@ -13,11 +13,15 @@
 
         <div style="margin-left: 5%; width: 80%;">
             {% for key, value in source.items %}
-                <section id={{ key }}>
-                    <hr>
-                    <h4>{{ value.1 }}</h4>
-                    {{value.0}}
-                </section>
+                {% if key == "content" %}
+                    <section id={{ key }} style="white-space: pre-line;">
+                        <hr><h4>{{ value.1 }}</h4>{{value.0}}
+                    </section>
+                {% else %}
+                    <section id={{ key }}>
+                        <hr><h4>{{ value.1 }}</h4>{{value.0}}
+                    </section>
+                {% endif %}
             {% endfor %}
         </div>
     </div>

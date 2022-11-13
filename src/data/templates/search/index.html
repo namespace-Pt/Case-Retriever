@@ -4,6 +4,17 @@
 
 
 <div class="container">
+    <div class="mt-2">
+        <nav class="navbar">
+            <div class="container">
+              <a class="navbar-brand" href="#">
+                <img src="{% static 'small-icon.png' %}" alt="Small Icon">
+              </a>
+            </div>
+        </nav>
+        <!-- only block has margin-left and margin-right -->
+        <img id="main-icon" src="{% static 'main-icon.jpg' %}" alt="Main Icon" class="img-fluid" style="width: auto; height: 30vh; display: block; margin-left: auto; margin-right: auto;">
+    </div>
     <div class="search-bar">
         <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">关键词查询</button>
             <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
@@ -19,8 +30,8 @@
             </div>
         <div class="form-floating flex-grow-1">
             <!-- the placeholder is necessary here for the floating label to work; explicitly set height -->
-            <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder"></textarea>
-            <label for="search-query"><small>查询：</small></label>
+            <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder" style="padding-top: 19px;"></textarea>
+            <label for="search-query"><smaller></smaller></label>
         </div>
         <button class="btn btn-primary rounded-0" type="submit" id="search-button">
         搜索
@@ -36,6 +47,7 @@
         <div class="keyword">民间借贷纠纷</div>
         <div class="keyword">受贿</div>
         <div class="keyword">帮助信息网络犯罪活动</div>
+        <div class="keyword">侵权纠纷</div>
     </div>
 
     <div class="horizontal-align-content" id="search-results-and-facets">
@@ -77,7 +89,7 @@
     let max_page = 5
 
     // these are pre-defined parameters
-    let max_doc_num_per_page = 20
+    let max_doc_num_per_page = 25
     // map the english field name to chinese when displaying on the facet bar
     let agg_field_dict = JSON.parse("{{ field_name_chinese|escapejs }}")
 
@@ -130,7 +142,7 @@
 
         // the first query makes the search bar float to the top and hides the copyright and keywords bar
         if (first_query){
-            $(".search-bar").animate({"margin-top": "5vh"})
+            $("#main-icon").animate({"height": "0"})
             $(".copyright").hide()
             $("#keywords-bar").hide()
             first_query = false
@@ -223,10 +235,13 @@
                                         </span>
                                     </div>
                                 </div>
-                                <p class="mb-1">${hit.content}</p>
-                                <div class="d-flex justify-content-between">
-                                    <span><small><em>${hit.court_name}</em></small></span>
-                                    <span class="float-end"><small><em>${hit.publish_date}</em></small></span>
+                                <p class="mb-2">${hit.content}</p>
+                                <div class="grid text-center">
+                                    <div class="row">
+                                        <div class="col text-start" style="font-size: small; font-style: italic">${hit.case_id}</div>
+                                        <div class="col" style="font-size: small; font-style: italic">${hit.court_name}</div>
+                                        <div class="col text-end" style="font-size: small; font-style: italic">${hit.publish_date}</div>
+                                    </div>
                                 </div>
                             </div>`
                 $("#search-results").append(frame)
@@ -325,8 +340,6 @@
             agg_array = id.split("-") // facet-agg-term-case_name
             agg_type = agg_array[2]
             agg_field = agg_array[3]
-
-            console.log(agg_type)
 
             // term aggregation corresponds to checkbox
             if (agg_type == "terms"){
@@ -446,6 +459,7 @@
         hit = hits[index]
         data = {
             query: $("#search-query").val(),
+            candidate_id: hit["_id"],
             candidate: hit["pseudo_basics_text"]
         }
 
