@@ -32,9 +32,8 @@
     // parse the contexts
     let query_sents = JSON.parse("{{ query_sents|escapejs }}")
     let candidate_sents = JSON.parse("{{ candidate_sents|escapejs }}")
-    let query_matched_sent_indices = JSON.parse("{{ query_matched_sent_indices|escapejs }}")
-    let candidate_matched_sent_indices = JSON.parse("{{ candidate_matched_sent_indices|escapejs }}")
-    let previous_query_sent_index = null
+    let connected_components = JSON.parse("{{ connected_components|escapejs }}")    // [([1,2,3], [0,5,6]), ...]
+    let previous_node = null
 
     // palette for the matched text
     let palettes =[["#FFFFCC", "#FFFF00"], ["#CCFFFF", "#CCCCFF"], ["#FFCCCC", "#CCCCCC"], ["#FFCC99", "#FF9900"], ["#CCFFCC", "#CCCC33"]]
@@ -50,44 +49,59 @@
 
     let i = 0
     // initialize all matching
-    for (query_sent_index in query_matched_sent_indices) {
-        query_span = $(`#query-block > span:eq(${query_sent_index})`)
-        query_span.css({"background-color": palettes[i][0], "cursor": "pointer"})
-        query_span.attr("data-index", i);
-        for (index of query_matched_sent_indices[query_sent_index]){
-            candidate_span = $(`#candidate-block > span:eq(${index})`)
-            candidate_span.css({"background-color": palettes[i][0], "cursor": "pointer"})
-            candidate_span.attr("data-index", i);
+    // store the edges in the DOM
+    for (connected_component of connected_components) {
+        query_sent_indices = connected_component[0]
+        candidate_sent_indices = connected_component[1]
+
+        for (query_sent_index of query_sent_indices) {
+            query_span = $(`#query-block > span:eq(${query_sent_index})`)
+            query_span.css({"background-color": palettes[i][0], "cursor": "pointer"})
+            query_span.attr("data-palette-index", i);
+            query_span.attr("data-connected-query", JSON.stringify(query_sent_indices))
+            query_span.attr("data-connected-candidate", JSON.stringify(candidate_sent_indices))
         }
+        for (candidate_sent_index of candidate_sent_indices) {
+            candidate_span = $(`#candidate-block > span:eq(${candidate_sent_index})`)
+            candidate_span.css({"background-color": palettes[i][0], "cursor": "pointer"})
+            candidate_span.attr("data-palette-index", i);
+            candidate_span.attr("data-connected-query", query_sent_indices)
+            candidate_span.attr("data-connected-candidate", candidate_sent_indices)
+        }
+
         i += 1
     }
 
-
-    $("#query-block > span").click(function () {
+    $("span").click(function () {
         // de-highlight last clicked query
-        if (previous_query_sent_index) {
-            update_highlight(previous_query_sent_index)
-            previous_query_sent_index = null
+        if (previous_node) {
+            update_highlight(previous_node)
+            previous_node = null
         }
-
-        let query_sent_index = $("#query-block > span").index(this)
-        if (query_sent_index in query_matched_sent_indices){
-            update_highlight(query_sent_index, 1)
-        }
+        update_highlight($(this), 1)
     });
 
+    function update_highlight(node, highlight_level=0) {
+        palette_index = node.data("palette-index")
+        query_sent_indices = node.data("connected-query")
+        candidate_sent_indices = node.data("connected-candidate")
 
-    function update_highlight(query_sent_index, highlight_level=0) {
-        palette_index = $(`#query-block > span:eq(${query_sent_index})`).data().index
-        console.log(query_sent_index, palette_index)
+        if (palette_index == undefined) {
+            return
+        }
 
-        $(`#query-block > span:eq(${query_sent_index})`).css("background-color", palettes[palette_index][highlight_level])
-        for (index of query_matched_sent_indices[query_sent_index]){
-            $(`#candidate-block > span:eq(${index})`).css("background-color", palettes[palette_index][highlight_level])
+        // update the entire connected component when they are matched
+        for (query_sent_index of query_sent_indices) {
+            query_span = $(`#query-block > span:eq(${query_sent_index})`)
+            query_span.css({"background-color": palettes[palette_index][highlight_level]})
+        }
+        for (candidate_sent_index of candidate_sent_indices) {
+            candidate_span = $(`#candidate-block > span:eq(${candidate_sent_index})`)
+            candidate_span.css({"background-color": palettes[palette_index][highlight_level]})
         }
 
         if (highlight_level > 0) {
-            previous_query_sent_index = query_sent_index
+            previous_node = node
         }
     }
 

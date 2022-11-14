@@ -1,4 +1,5 @@
 import json
+import networkx as nx
 from urllib.parse import quote
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -279,23 +280,41 @@ def explain(request):
 
         query_sents, candidate_sents, matched_pairs = get_explanation_features(query, candidate)
 
-        query_matched_sent_indices = defaultdict(list)
-        candidate_matched_sent_indices = defaultdict(list)
-        for pair in matched_pairs:
-            query_matched_sent_indices[pair[0]].append(pair[1])
-            candidate_matched_sent_indices[pair[1]].append(pair[0])
-        query_matched_sent_indices = dict(query_matched_sent_indices)
-        candidate_matched_sent_indices = dict(candidate_matched_sent_indices)
+        g = nx.Graph()
+        query_sents = query_sents[0]
+        candidate_sents = candidate_sents[0]
+        offset = len(query_sents)
+
+        g.add_nodes_from(range(offset))
+        g.add_nodes_from(range(offset, offset + len(candidate_sents), 1))
+
+        for edge in matched_pairs:
+            g.add_edge(edge[0], edge[1] + offset)
+
+        # maximum connected component
+        S = sorted([g.subgraph(c).copy() for c in nx.connected_components(g)], key=len, reverse=True)
+        connected_components = []
+        for s in S:
+            query_node = []
+            candidate_node = []
+            for n in s.nodes:
+                if n < offset:
+                    query_node.append(n)
+                else:
+                    candidate_node.append(n - offset)
+            if len(query_node) == 0 or len(candidate_node) == 0:
+                break
+            connected_components.append((query_node, candidate_node))
 
         return render(
             request,
             "search/explain.html",
             {
                 "candidate_source": candidate_source,
-                "query_sents": json.dumps(query_sents[0], ensure_ascii=False),
-                "candidate_sents": json.dumps(candidate_sents[0], ensure_ascii=False),
-                "query_matched_sent_indices": json.dumps(query_matched_sent_indices, ensure_ascii=False),
-                "candidate_matched_sent_indices": json.dumps(candidate_matched_sent_indices, ensure_ascii=False)
+                # use json dump; ensure_ascii=False so that chinese characters are valid
+                "query_sents": json.dumps(query_sents, ensure_ascii=False),
+                "candidate_sents": json.dumps(candidate_sents, ensure_ascii=False),
+                "connected_components": json.dumps(connected_components, ensure_ascii=False),
             }
         )
 
