@@ -3,79 +3,73 @@
 {% block body %}
 
 
-    <div class="container">
-        <div class="nav py-4 border-bottom">
-          <a href="/" class="col-3 text-dark text-decoration-none">
-            <img src="{% static 'small-icon.png' %}" alt="Small Icon">
-          </a>
-        </div>
-            <img id="main-icon" src="{% static 'main-icon.jpg' %}" alt="Main Icon" class="img-fluid", style="height: 30vh; display: block; margin-left: auto; margin-right: auto;">
-        <div class="row row-cols-1">
-        </div>
-
-        <div class="d-flex justify-content-center">
-            <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">关键词查询</button>
-                <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
-                    <li><h6 class="dropdown-header">查询方式</h6></li>
-                    <li><a class="dropdown-item" href="#">关键词查询</a></li>
-                    <li><a class="dropdown-item" href="#">类案查询</a></li>
-                </div>
-            <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="field-dropdown-button">全文</button>
-                <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
-                    <li><h6 class="dropdown-header">查询域</h6></li>
-                    <li><a class="dropdown-item" href="#">全文</a></li>
-                    <li><a class="dropdown-item" href="#">仅案情</a></li>
-                </div>
-            <div class="form-floating flex-grow-1">
-                <!-- the placeholder is necessary here for the floating label to work; explicitly set height -->
-                <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder" style="padding-top: 19px;"></textarea>
-                <label for="search-query"><smaller></smaller></label>
-            </div>
-            <button class="btn btn-primary rounded-0" type="submit" id="search-button">
-            搜索
-            </button>
-            <!-- align-self to align vertically; left to adjust position -->
-            <div style="position: absolute; align-self: center; left: 100%;">
-                <div id="spinner" class="lds-spinner" style="scale: 0.4; display: block;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
-            </div>
-        </div>
-
-        <div id="keywords-bar">
-            <!-- <div style="grid-area:header; justify-self:center; align-self:center"></div> -->
-            <div class="keyword">民间借贷纠纷</div>
-            <div class="keyword">受贿</div>
-            <div class="keyword">帮助信息网络犯罪活动</div>
-            <div class="keyword">侵权纠纷</div>
-            <div class="keyword">合同纠纷</div>
-            <div class="keyword">侵害作品信息网络传播权纠纷</div>
-        </div>
-
-        <div class="horizontal-align-content" id="search-results-and-facets">
-            <div class="facet-sidebar" id="search-facets">
-            </div>
-            <div style="width: 70%;" id="search-results">
-            </div>
-        </div>
-
-        <div style="margin-top: 3vh;">
-            <nav>
-                <ul id="page-bar" class="pagination justify-content-center">
-                </ul>
-            </nav>
-        </div>
-
-        <div class="copyright">
-            <hr>
-            Open Source at  <a class="text-decoration-none" href="http://github.com/namespace-Pt/Case-Retriever" target="_blank"><i class="fab fa-github" aria-hidden="true"></i>GitHub</a>
-        </div>
-
-
-
+<div class="container">
+    <div class="nav py-3 mb-5 border-bottom">
+        <a href="{% url 'vue-main' %}" class="col-3 text-dark text-decoration-none">
+        <img src="{% static 'small-icon.png' %}" alt="Small Icon">
+        </a>
     </div>
+    <img id="main-icon" src="{% static 'main-icon.jpg' %}" alt="Main Icon" class="img-fluid mx-auto", style="height: 30vh; display: block; margin-bottom: 3%;">
+
+    <div class="d-flex justify-content-center align-items-stretch position-relative mb-5">
+        <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">关键词查询</button>
+            <div class="dropdown-menu dropdown-menu-macos shadow">
+                <li><h6 class="dropdown-header">查询方式</h6></li>
+                <li><a class="dropdown-item" href="#">关键词查询</a></li>
+                <li><a class="dropdown-item" href="#">类案查询</a></li>
+            </div>
+        <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="field-dropdown-button">全文</button>
+            <div class="dropdown-menu dropdown-menu-macos shadow">
+                <li><h6 class="dropdown-header">查询域</h6></li>
+                <li><a class="dropdown-item" href="#">全文</a></li>
+                <li><a class="dropdown-item" href="#">仅案情</a></li>
+            </div>
+        <div class="form-floating flex-grow-1">
+            <!-- the placeholder is necessary here for the floating label to work; explicitly set height -->
+            <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder" style="padding-top: 19px;"></textarea>
+            <label for="search-query"><smaller></smaller></label>
+        </div>
+        <button class="btn btn-primary rounded-0" type="submit" id="search-button">搜索</button>
+        <!-- explicitly set display to none using css, cannot use bootstrap because we want to use .hide() -->
+        <div id="spinner" class="lds-spinner position-absolute align-self-center start-100" style="scale: 0.4; display: none;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+    </div>
+
+    <div id="keywords-bar">
+        <div class="keyword">民间借贷纠纷</div>
+        <div class="keyword">受贿</div>
+        <div class="keyword">帮助信息网络犯罪活动</div>
+        <div class="keyword">侵权纠纷</div>
+        <div class="keyword">合同纠纷</div>
+        <div class="keyword">侵害作品信息网络传播权纠纷</div>
+    </div>
+
+    <div class="row mt-5" id="search-results-and-facets">
+        <div class="col-3" id="search-facets">
+        </div>
+        <div class="col-9" id="search-results">
+        </div>
+    </div>
+
+    <div class="mt-1">
+        <nav>
+            <ul id="page-bar" class="pagination justify-content-center">
+            </ul>
+        </nav>
+    </div>
+
+    <footer class="d-flex flex-wrap justify-content-between align-items-center mt-3 py-2 border-top" id="footer">
+        <div class="col-md-4 d-flex align-items-center">
+            <small><span class="mb-3 mb-md-0 text-muted">© 2022 namespace-Pt. Powered by <a class="text-muted text-decoration-none" href="https://www.elastic.co/cn/elasticsearch/">Elasticsearch</a>.</span></small>
+        </div>
+        <ul class="nav col-md-4 justify-content-end list-unstyled d-flex">
+            <li class="ms-3"><a class="text-muted" target="_blank" href="http://github.com/namespace-Pt/Case-Retriever" title="View Source"><i class="fa-brands fa-github"></i></a></li>
+            <li class="ms-3"><a class="text-muted" target="_blank" href="mailto: namespace.pt@gmail.com" title="Email Me!"><i class="fa-solid fa-inbox"></i></a></li>
+        </ul>
+    </footer>
+</div>
 
 
 <script>
-
     // these are returned from the server side
     let hits = []
     let aggregations = {}
@@ -132,36 +126,39 @@
 
 
     $("#search-button").click(function (){
+        // exit if the query is none
+        if ($("#search-query").val().length == 0){
+            return
+        }
+
         // unfocus the textarea and the button
         $("#search-query").blur()
         $("#search-button").blur()
 
-        // remove all previous searched documents
-        $("#search-results").html("")
-        $("#search-facets").html("")
-        $("#page-bar").html("")
-
         // the first query makes the search bar float to the top and hides the copyright and keywords bar
         if (first_query){
-            $("#main-icon").animate({"height": "0"})
-            $(".copyright").hide()
+            $("#main-icon").removeClass("mb-5")
+            $("#main-icon").animate({"height": "0", "margin-bottom": "0"})
             $("#keywords-bar").hide()
+            $("#footer").hide()
             first_query = false
         }
 
-        search(
-            () => {refresh_facets(); display_pages()}
-        )
+        facets = []
+        current_page = 1
+        search()
     })
 
 
-    function search(callback=null, data=null) {
+    function search(data=null, clear_facets=true, clear_pages=true) {
+        /*
+        Params:
+            data: override the default data passed to the server
+            clear_facets: reload facets
+            clear_pages: re-initialize page display
+        */
         // send search post loading parameters from global variables
-        // if success, refresh search results and call extra callback functions
-
-        // show the progress bar
-        $("#spinner").show()
-
+        // if success, refresh search results
         if (!data) {
             data = {
                 query: $("#search-query").val(),
@@ -174,14 +171,26 @@
         }
         console.log(data)
 
+        // scroll to the top of the page
+        document.documentElement.scrollTop = 0
+        // remove all previous searched documents
+        $("#search-results").html("")
+        // show the progress bar
+        $("#spinner").show()
+
+        if (clear_facets) {
+            $("#search-facets").html("")
+        }
+        if (clear_pages) {
+            $("#page-bar").html("")
+        }
+
         // ignore empty queries
         if (data["query"].length){
             $.ajax("{% url 'vue-main' %}", {
                 type: "POST",
                 data: JSON.stringify(data),
                 success: function(response){
-                    $("#spinner").hide()
-
                     // update results and facets
                     hits = response["hits"]
                     aggregations = response["aggregations"]
@@ -192,10 +201,13 @@
 
                     console.log(response)
                     refresh_search_results()
-                    // refresh_facets()
+                    $("#spinner").hide()
 
-                    if (callback) {
-                        callback()
+                    if (clear_facets) {
+                        refresh_facets()
+                    }
+                    if (clear_pages) {
+                        display_pages()
                     }
                 }
             })
@@ -204,16 +216,7 @@
 
 
     function refresh_search_results() {
-        // reset the height of the textarea
-        // $("#search-query").height("")
-        $("#search-results").html("")
-
-        // scroll to the top of the page
-        document.documentElement.scrollTop = 0
-
         if (hits.length){
-            $("#background").addClass("p-4")
-
             let efficiency_bar = `<span><em style="font-size:smaller; color: grey;">about ${total} results in ${took}s</em></span>`
             $("#search-results").append(efficiency_bar)
 
@@ -221,12 +224,12 @@
             // display hits in the search-results container
             for (hit of hits){
                 // here we must use the url string instead of the url name because it contains parameters
-                let frame = `<div class="search-result border border-light-5 rounded-4 p-2 mb-2">
-                                <div style="justify-content:space-between; display:flex; align-items:center">
-                                    <div style="width:90%">
+                let frame = `<div class="border border-light-5 rounded-4 p-2 mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
                                         <a class="text-decoration-none" href="detail/${hit._id}/" target="_blank">${hit.case_name}</a>
                                     </div>
-                                    <div style="display: flex; justify-content: space-between; align-self:baseline">
+                                    <div class="d-flex justify-content-between align-items-baseline">
                                         <div>
                                             <span class="icon-button">
                                                 <a href="download/${hit._id}/" style="color: none;" title="下载文书" download><i class="fa-solid fa-download"></i></a>
@@ -245,12 +248,10 @@
                                     </div>
                                 </div>
                                 <p class="mb-2">${hit.content}</p>
-                                <div class="grid text-center">
-                                    <div class="row">
-                                        <div class="col text-start" style="font-size: small; font-style: italic">${hit.case_id}</div>
-                                        <div class="col" style="font-size: small; font-style: italic">${hit.court_name}</div>
-                                        <div class="col text-end" style="font-size: small; font-style: italic">${hit.publish_date}</div>
-                                    </div>
+                                <div class="row">
+                                    <div class="col text-start" style="font-size: small; font-style: italic">${hit.case_id}</div>
+                                    <div class="col text-center" style="font-size: small; font-style: italic">${hit.court_name}</div>
+                                    <div class="col text-end" style="font-size: small; font-style: italic">${hit.publish_date}</div>
                                 </div>
                             </div>`
                 $("#search-results").append(frame)
@@ -261,8 +262,6 @@
 
 
     function refresh_facets() {
-        $("#search-facets").html("")
-
         if (aggregations){
             for ([agg_name, agg] of Object.entries(aggregations)) {
                 const agg_array = agg_name.split("-")
@@ -307,15 +306,13 @@
 
     function display_pages() {
         // initialize page display when displaying search results
-
         let pre_page = `<li class="page-item disabled">
                             <button class="page-link" onclick="process_pages(this)">Previous</button>
                         </li>`
-        let current_page = `<li class="page-item">
+        let next_page = `<li class="page-item">
                             <button class="page-link" onclick="process_pages(this)">Next</button>
                         </li>`
 
-        $("#page-bar").html("")
         if (hits.length){
             $("#page-bar").append(pre_page)
             // limit the page bar to length of 5
@@ -323,7 +320,7 @@
                 let page = `<li class="page-item"><button class="page-link" onclick="process_pages(this)">${i}</button></li>`
                 $("#page-bar").append(page)
             }
-            $("#page-bar").append(current_page)
+            $("#page-bar").append(next_page)
 
             // default to activate the first page
             $(`#page-bar > li:eq(1)`).addClass("active")
@@ -376,9 +373,8 @@
 
         // reset current page to 1
         current_page = 1
-        search(
-            () => {display_pages()}
-        )
+        // do not clear facets
+        search(null, false)
     }
 
 
@@ -434,15 +430,12 @@
             }
         }
 
-        search()
+        // do not clear facets and pages
+        search(null, false, false)
     }
 
 
     function process_search_similar_case(index) {
-        $("#search-results").html("")
-        $("#search-facets").html("")
-        $("#page-bar").html("")
-
         hit = hits[index]
         query = hit["pseudo_basics_text"]
         $("#search-query").val(query)
@@ -450,7 +443,6 @@
         $("#field-dropdown-button").text("仅案情")
 
         search(
-            () => {refresh_facets(); display_pages()},
             // pass in data explicitly to override facets and backbone
             {
                 query: query,

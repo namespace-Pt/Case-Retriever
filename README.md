@@ -4,12 +4,14 @@
 - `bootstrap==5.1.3`
 
 ## Instruction
-```
+```bash
 bin/elasticsearch-plugin install analysis-smartcn
 bin/elasticsearch
 
 cd app
 python manager.py runserver
+
+# open localhost/search
 ```
 
 ## Framework

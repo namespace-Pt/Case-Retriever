@@ -170,7 +170,6 @@ def search(query, backbone, search_field, facets, from_, size):
     hits = resp["hits"]["hits"]
     # use the sampler output
     aggregations = resp["aggregations"]["sample"]
-    print(aggregations["doc_count"])
     # get total hits
     total = resp["hits"]["total"]["value"]
     took = round(resp["took"] / 1000, 2)
@@ -185,13 +184,13 @@ def search(query, backbone, search_field, facets, from_, size):
 
         # generate content based on search field
         if search_field == "全文":
-            content = fields["content"][0][:500] if "content" in fields else "MISSING CONTENT!"
+            content = fields["content"][0][:300] if "content" in fields else "MISSING CONTENT!"
         elif search_field == "仅案情":
-            content = fields["basics_text"][0][:500] if "basics_text" in fields else "MISSING CONTENT!"
+            content = fields["basics_text"][0][:300] if "basics_text" in fields else "MISSING CONTENT!"
 
         # add [0] because elastic returns list by default
         new_hit = {
-            "case_name": fields["case_name"][0][:100] if "case_name" in fields else "MISSING CONTENT!",
+            "case_name": fields["case_name"][0] if "case_name" in fields else "MISSING CONTENT!",
             "content": content,
             "court_name": fields["court_name"][0] if "court_name" in fields else "",
             "publish_date": fields["publish_date"][0] if "publish_date" in fields else "",
@@ -218,7 +217,7 @@ def search(query, backbone, search_field, facets, from_, size):
 
     # reorder the aggregations so that it displays in order
     sorted_aggregations = {}
-    for agg in query_dict["aggs"]:
+    for agg in query_dict["aggs"]["sample"]["aggs"]:
         if agg in aggregations:
             sorted_aggregations[agg] = aggregations[agg]
 
@@ -289,8 +288,8 @@ def explain(request):
         query_sents, candidate_sents, matched_pairs = get_explanation_features(query, candidate)
 
         g = nx.Graph()
-        query_sents = query_sents[0]
-        candidate_sents = candidate_sents[0]
+        # query_sents = query_sents[0]
+        # candidate_sents = candidate_sents[0]
         offset = len(query_sents)
 
         g.add_nodes_from(range(offset))

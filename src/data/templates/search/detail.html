@@ -2,28 +2,42 @@
 
 {% block body %}
 <div class="container">
-    <div style="display: flex;">
-        <div class="detail-sidebar" style="font-size: large;">
-            <ul style="list-style: none;">
+    <div class="row">
+        <div class="col-2 detail-sidebar">
+            <nav id="sidebar" class="navbar navbar-light flex-column align-items-stretch p-3">
+                <nav class="nav nav-pills flex-column text-center">
+                    {% for key, value in source.items %}
+                        <a class="nav-link" href="#{{ key }}">{{ value.1 }}</a>
+                    {% endfor %}
+                </nav>
+            </nav>
+            <!-- <div id="sidebar" class="list-group">
                 {% for key, value in source.items %}
-                    <li><a href="#{{ key }}" class="text-decoration-none">{{ value.1 }}</a></li>
+                    <a class="list-group-item list-group-item-action" href="#{{ key }}">{{ value.1 }}</a>
                 {% endfor %}
-            </ul>
+            </div> -->
         </div>
-
-        <div style="margin-left: 5%; width: 80%;">
-            {% for key, value in source.items %}
-                {% if key == "content" %}
-                    <section id={{ key }} style="white-space: pre-line;">
-                        <hr><h4>{{ value.1 }}</h4>{{value.0}}
-                    </section>
-                {% else %}
-                    <section id={{ key }}>
-                        <hr><h4>{{ value.1 }}</h4>{{value.0}}
-                    </section>
-                {% endif %}
-            {% endfor %}
+        <div class="col-10">
+            <div data-bs-spy="scroll" data-bs-target="#sidebar" data-bs-offset="0" tabindex="0">
+                {% for key, value in source.items %}
+                    {% if key == "content" %}
+                        <section id={{ key }} style="white-space: pre-line;">
+                            <hr><h4>{{ value.1 }}</h4>
+                            <p>{{value.0}}</p>
+                        </section>
+                    {% else %}
+                        <section id={{ key }}>
+                            <hr><h4>{{ value.1 }}</h4>
+                            <p>{{value.0}}</p>
+                        </section>
+                    {% endif %}
+                {% endfor %}
+              </div>
         </div>
     </div>
+
+
+
 </div>
 {% endblock %}
+

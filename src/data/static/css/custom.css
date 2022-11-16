@@ -34,7 +34,6 @@
   display: grid;
   margin-left: auto;
   margin-right: auto;
-  margin-top: 10vh;
 
   grid-template-columns: 45% 45%;
   grid-template-rows: 1fr 1fr 1fr 1fr;
@@ -83,14 +82,9 @@
     position: sticky;
     overflow-y: scroll; */
 }
-.facet-sidebar::-webkit-scrollbar {
-  width: 0;  /* Remove scrollbar space */
-  background: transparent;  /* Optional: just make scrollbar invisible */
-}
 
 .detail-sidebar{
   top: 5vh;
-  width: 20%;
   height: 100vh;
   position: sticky;
   overflow-y: scroll;
