@@ -1,22 +1,44 @@
 {% extends "base.html" %}
 {% load static %}
-{% block head %}
-<style>
-    #footer {
-        position: relative;
-        left: 50%;
-        bottom: 0px;
-        -webkit-transform: translateX(-50%);
-        transform: translateX(-50%)
-    }
-</style>
-{% endblock %}
 
 {% block body %}
-<div class="container">
-    <div id="footer">
-        Some content you don't want affected by the "bottom floating" div
+<div style="justify-content:space-between; display:flex; padding-right: 1%; align-items:baseline">
+    <div>
+        <a class="text-decoration-none" href="detail/${hit._id}/" target="_blank">测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试</a>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-left: 3px;">
+        <div>
+            <span class="icon-button">
+                <a href="download/${hit._id}/" style="color: none;" title="下载文书" download><i class="fa-solid fa-download"></i></a>
+            </span>
+        </div>
+        <div>
+            <span class="icon-button" title="搜索类案" onclick="process_search_similar_case(0)">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+        </div>
+        <div>
+            <span class="icon-button" title="解释" onclick="process_search_explain(0)">
+                <i class="fa-solid fa-compass"></i>
+            </span>
+        </div>
     </div>
 </div>
 
+<div style="justify-content:space-between; display:flex; padding-right: 1%; align-items:center">
+    <div>
+        <a class="text-decoration-none" href="detail/${hit._id}/" target="_blank">测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试</a>
+    </div>
+    <div">
+        <span class="icon-button">
+            <a href="download/${hit._id}/" style="color: none;" title="下载文书" download><i class="fa-solid fa-download"></i></a>
+        </span>
+        <span class="icon-button" title="搜索类案" onclick="process_search_similar_case(0)">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </span>
+        <span class="icon-button" title="解释" onclick="process_search_explain(0)">
+            <i class="fa-solid fa-compass"></i>
+        </span>
+    </div>
+</div>
 {% endblock %}

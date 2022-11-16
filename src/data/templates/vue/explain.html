@@ -44,7 +44,7 @@
     }
 
     for (sent of candidate_sents){
-        $("#candidate-block").append(`<span>${sent}</span> `)
+        $("#candidate-block").append(`<span>${sent}</span>`)
     }
 
     let i = 0
@@ -54,21 +54,19 @@
         query_sent_indices = connected_component[0]
         candidate_sent_indices = connected_component[1]
 
-        j = i % palettes.length
-
         for (query_sent_index of query_sent_indices) {
             query_span = $(`#query-block > span:eq(${query_sent_index})`)
-            query_span.css({"background-color": palettes[j][0], "cursor": "pointer"})
-            query_span.attr("data-palette-index", j);
+            query_span.css({"background-color": palettes[i][0], "cursor": "pointer"})
+            query_span.attr("data-palette-index", i);
             query_span.attr("data-connected-query", JSON.stringify(query_sent_indices))
             query_span.attr("data-connected-candidate", JSON.stringify(candidate_sent_indices))
         }
         for (candidate_sent_index of candidate_sent_indices) {
             candidate_span = $(`#candidate-block > span:eq(${candidate_sent_index})`)
-            candidate_span.css({"background-color": palettes[j][0], "cursor": "pointer"})
-            candidate_span.attr("data-palette-index", j);
-            candidate_span.attr("data-connected-query", JSON.stringify(query_sent_indices))
-            candidate_span.attr("data-connected-candidate", JSON.stringify(candidate_sent_indices))
+            candidate_span.css({"background-color": palettes[i][0], "cursor": "pointer"})
+            candidate_span.attr("data-palette-index", i);
+            candidate_span.attr("data-connected-query", query_sent_indices)
+            candidate_span.attr("data-connected-candidate", candidate_sent_indices)
         }
 
         i += 1

@@ -3,76 +3,75 @@
 {% block body %}
 
 
-<div class="container">
-    <div class="mt-2">
-        <nav class="navbar">
-            <div class="container">
-              <a class="navbar-brand" href="#">
-                <img src="{% static 'small-icon.png' %}" alt="Small Icon">
-              </a>
+    <div class="container">
+        <div class="nav py-4 border-bottom">
+          <a href="/" class="col-3 text-dark text-decoration-none">
+            <img src="{% static 'small-icon.png' %}" alt="Small Icon">
+          </a>
+        </div>
+            <img id="main-icon" src="{% static 'main-icon.jpg' %}" alt="Main Icon" class="img-fluid", style="height: 30vh; display: block; margin-left: auto; margin-right: auto;">
+        <div class="row row-cols-1">
+        </div>
+
+        <div class="d-flex justify-content-center">
+            <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">关键词查询</button>
+                <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
+                    <li><h6 class="dropdown-header">查询方式</h6></li>
+                    <li><a class="dropdown-item" href="#">关键词查询</a></li>
+                    <li><a class="dropdown-item" href="#">类案查询</a></li>
+                </div>
+            <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="field-dropdown-button">全文</button>
+                <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
+                    <li><h6 class="dropdown-header">查询域</h6></li>
+                    <li><a class="dropdown-item" href="#">全文</a></li>
+                    <li><a class="dropdown-item" href="#">仅案情</a></li>
+                </div>
+            <div class="form-floating flex-grow-1">
+                <!-- the placeholder is necessary here for the floating label to work; explicitly set height -->
+                <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder" style="padding-top: 19px;"></textarea>
+                <label for="search-query"><smaller></smaller></label>
             </div>
-        </nav>
-        <!-- only block has margin-left and margin-right -->
-        <img id="main-icon" src="{% static 'main-icon.jpg' %}" alt="Main Icon" class="img-fluid" style="width: auto; height: 30vh; display: block; margin-left: auto; margin-right: auto;">
-    </div>
-    <div class="search-bar">
-        <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="backbone-dropdown-button">关键词查询</button>
-            <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
-                <li><h6 class="dropdown-header">查询方式</h6></li>
-                <li><a class="dropdown-item" href="#">关键词查询</a></li>
-                <li><a class="dropdown-item" href="#">类案查询</a></li>
+            <button class="btn btn-primary rounded-0" type="submit" id="search-button">
+            搜索
+            </button>
+            <!-- align-self to align vertically; left to adjust position -->
+            <div style="position: absolute; align-self: center; left: 100%;">
+                <div id="spinner" class="lds-spinner" style="scale: 0.4; display: block;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
             </div>
-        <button type="button" class="btn btn-primary dropdown-toggle rounded-0" data-bs-toggle="dropdown" id="field-dropdown-button">全文</button>
-            <div class="dropdown-menu dropdown-menu-macos mx-0 shadow">
-                <li><h6 class="dropdown-header">查询域</h6></li>
-                <li><a class="dropdown-item" href="#">全文</a></li>
-                <li><a class="dropdown-item" href="#">仅案情</a></li>
+        </div>
+
+        <div id="keywords-bar">
+            <!-- <div style="grid-area:header; justify-self:center; align-self:center"></div> -->
+            <div class="keyword">民间借贷纠纷</div>
+            <div class="keyword">受贿</div>
+            <div class="keyword">帮助信息网络犯罪活动</div>
+            <div class="keyword">侵权纠纷</div>
+            <div class="keyword">合同纠纷</div>
+            <div class="keyword">侵害作品信息网络传播权纠纷</div>
+        </div>
+
+        <div class="horizontal-align-content" id="search-results-and-facets">
+            <div class="facet-sidebar" id="search-facets">
             </div>
-        <div class="form-floating flex-grow-1">
-            <!-- the placeholder is necessary here for the floating label to work; explicitly set height -->
-            <textarea class="form-control border-primary rounded-0" id="search-query" placeholder="placeholder" style="padding-top: 19px;"></textarea>
-            <label for="search-query"><smaller></smaller></label>
+            <div style="width: 70%;" id="search-results">
+            </div>
         </div>
-        <button class="btn btn-primary rounded-0" type="submit" id="search-button">
-        搜索
-        </button>
-        <!-- align-self to align vertically; left to adjust position -->
-        <div style="position: absolute; align-self: center; left: 100%;">
-            <div id="spinner" class="lds-spinner" style="scale: 0.4; display: none;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+
+        <div style="margin-top: 3vh;">
+            <nav>
+                <ul id="page-bar" class="pagination justify-content-center">
+                </ul>
+            </nav>
         </div>
-    </div>
 
-    <div id="keywords-bar">
-        <!-- <div style="grid-area:header; justify-self:center; align-self:center"></div> -->
-        <div class="keyword">民间借贷纠纷</div>
-        <div class="keyword">受贿</div>
-        <div class="keyword">帮助信息网络犯罪活动</div>
-        <div class="keyword">侵权纠纷</div>
-        <div class="keyword">合同纠纷</div>
-        <div class="keyword">侵害作品信息网络传播权纠纷</div>
-    </div>
-
-    <div class="horizontal-align-content" id="search-results-and-facets">
-        <div class="facet-sidebar" id="search-facets">
+        <div class="copyright">
+            <hr>
+            Open Source at  <a class="text-decoration-none" href="http://github.com/namespace-Pt/Case-Retriever" target="_blank"><i class="fab fa-github" aria-hidden="true"></i>GitHub</a>
         </div>
-        <div style="width: 70%;" id="search-results">
-        </div>
+
+
+
     </div>
-
-    <div style="margin-top: 3vh;">
-        <nav>
-            <ul id="page-bar" class="pagination justify-content-center">
-            </ul>
-        </nav>
-    </div>
-
-    <div class="copyright">
-        <hr>
-        Open Source at  <a class="text-decoration-none" href="http://github.com/namespace-Pt/Case-Retriever" target="_blank"><i class="fab fa-github" aria-hidden="true"></i>GitHub</a>
-    </div>
-</div>
-
-
 
 
 <script>
@@ -177,7 +176,7 @@
 
         // ignore empty queries
         if (data["query"].length){
-            $.ajax("{% url 'search-main' %}", {
+            $.ajax("{% url 'vue-main' %}", {
                 type: "POST",
                 data: JSON.stringify(data),
                 success: function(response){
@@ -473,7 +472,7 @@
             candidate: hit["pseudo_basics_text"]
         }
 
-        $.ajax("{% url 'search-explain' %}", {
+        $.ajax("{% url 'vue-explain' %}", {
             type: "POST",
             data: JSON.stringify(data),
             success: function(response){

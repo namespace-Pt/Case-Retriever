@@ -1,3 +1,3 @@
-python -m utils.filter --end 1000000
-python -m utils.filter --file p4.txt
-python -m utils.filter --file p5.txt
+python -m utils.add --file p1.txt
+python -m utils.add --file p2-2.txt
+python -m utils.add --file p3.txt

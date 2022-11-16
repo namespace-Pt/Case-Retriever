@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<div class="container">
+    <div style="display: flex;">
+        <div class="detail-sidebar" style="font-size: large;">
+            <ul style="list-style: none;">
+                {% for key, value in source.items %}
+                    <li><a href="#{{ key }}" class="text-decoration-none">{{ value.1 }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div style="margin-left: 5%; width: 80%;">
+            {% for key, value in source.items %}
+                {% if key == "content" %}
+                    <section id={{ key }} style="white-space: pre-line;">
+                        <hr><h4>{{ value.1 }}</h4>{{value.0}}
+                    </section>
+                {% else %}
+                    <section id={{ key }}>
+                        <hr><h4>{{ value.1 }}</h4>{{value.0}}
+                    </section>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
