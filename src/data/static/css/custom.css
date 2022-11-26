@@ -61,6 +61,13 @@
   color: #0d6efd;
 }
 
+.clickable {
+  cursor: pointer;
+}
+.clickable:hover {
+  color: #0d6efd;
+}
+
 .copyright {
   position: relative;
   left: 50%;

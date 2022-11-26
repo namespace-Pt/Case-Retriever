@@ -286,10 +286,10 @@
                                 name = agg_name
 
                                 let checkbox = `<div class="form-check">
-                                                    <input class='form-check-input' type="checkbox" id="${name}-${i}" onclick="process_facets(this)">
+                                                    <input class="form-check-input clickable" type="checkbox" id="${name}-${i}" onclick="process_facets(this)">
                                                     <div class="d-flex justify-content-between">
-                                                        <label class="form-check-label" for="${name}-${i}"><small>${key}</small></label>
-                                                        <span><small><em>${count}</em></small></span>
+                                                        <label class="form-check-label pr-2 clickable" for="${name}-${i}"><small>${key}</small></label>
+                                                        <span><small><em>${count}+</em></small></span>
                                                     </div>
                                                 </div>`
 
